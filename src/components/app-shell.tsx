@@ -31,12 +31,15 @@ function useIsDashboardScreen() {
 interface AppShellProps {
   children: React.ReactNode;
   canSuper77: boolean;
+  canManageUsers: boolean;
+  canIndicators: boolean;
+  canRegistries: boolean;
   userName: string;
   userInitials: string;
   onLogout: () => Promise<void>;
 }
 
-export function AppShell({ children, canSuper77, userName, userInitials, onLogout }: AppShellProps) {
+export function AppShell({ children, canSuper77, canManageUsers, canIndicators, canRegistries, userName, userInitials, onLogout }: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const breadcrumb = useBreadcrumb();
@@ -108,7 +111,12 @@ export function AppShell({ children, canSuper77, userName, userInitials, onLogou
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto">
-          <NavLinks canSuper77={canSuper77} />
+          <NavLinks
+            canSuper77={canSuper77}
+            canManageUsers={canManageUsers}
+            canIndicators={canIndicators}
+            canRegistries={canRegistries}
+          />
         </div>
 
         {/* User footer */}

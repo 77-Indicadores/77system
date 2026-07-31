@@ -8,7 +8,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session?.user?.email) redirect("/login");
 
   const permissions = await getUserPermissionSet(session.user.email);
-  const canSuper77 = permissions.has("super77.access");
 
   const displayName = session.user.name ?? session.user.email ?? "Usuário";
   const initials = displayName
@@ -25,7 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell
-      canSuper77={canSuper77}
+      canSuper77={permissions.has("super77.access")}
+      canManageUsers={permissions.has("users.manage")}
+      canIndicators={permissions.has("indicators.dashboard.view")}
+      canRegistries={permissions.has("registries.module.view")}
       userName={displayName}
       userInitials={initials}
       onLogout={logout}
