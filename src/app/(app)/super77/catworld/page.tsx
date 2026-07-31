@@ -12,7 +12,7 @@ export default async function CatworldPage() {
         <p className="text-sm text-muted-foreground">Diagnóstico da integração. Configuração via variáveis de ambiente.</p>
       </div>
 
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
+      <section className="rounded-lg border bg-card p-4">
         <h2 className="font-semibold">Status do serviço</h2>
         <div className="mt-3 grid gap-2 text-sm">
           <StatusRow label="catworld-service" value={health} ok={health === "online"} />
@@ -21,7 +21,7 @@ export default async function CatworldPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
+      <section className="rounded-lg border bg-card p-4">
         <h2 className="font-semibold">Como configurar</h2>
         <pre className="mt-3 rounded bg-muted p-3 text-xs leading-relaxed">{`# .env (ou variáveis do container)\nCATWORLD_BASE_URL="https://catworld.exemplo.com"\nCATWORLD_TOKEN="seu-token-aqui"`}</pre>
         <p className="mt-2 text-xs text-muted-foreground">Reinicie o serviço após alterar as variáveis.</p>

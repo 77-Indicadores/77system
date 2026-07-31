@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +24,19 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border bg-card p-5 ">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <Link
               aria-label="Voltar para cadastros"
-              className="mt-1 grid size-10 shrink-0 place-items-center rounded-lg border bg-white hover:bg-muted"
+              className="mt-1 grid size-10 shrink-0 place-items-center rounded-lg border bg-card hover:bg-muted"
               href="/registries"
               title="Voltar para cadastros"
             >
               <ArrowLeft className="size-4" />
             </Link>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground">77System &gt; cadastros &gt; {registry.key}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{BRAND.name} › cadastros › {registry.key}</p>
               <h1 className="mt-1 text-3xl font-black tracking-tight">{registry.name}</h1>
               <p className="text-sm text-muted-foreground">{registry.description}</p>
             </div>
@@ -44,7 +45,7 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
         </div>
       </section>
 
-      <section className="rounded-xl border bg-white p-5 shadow-sm">
+      <section className="rounded-xl border bg-card p-5 ">
         <h2 className="text-sm font-black">Novo registro</h2>
         <form action={create} className="mt-4 grid gap-3 lg:grid-cols-4">
           {schema.fields.map((field) => (
@@ -56,7 +57,7 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
         </form>
       </section>
 
-      <section className="overflow-hidden rounded-xl border bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border bg-card ">
         <header className="border-b px-5 py-4">
           <h2 className="text-sm font-black">Registros</h2>
         </header>

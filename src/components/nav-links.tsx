@@ -9,8 +9,13 @@ type NavItem = { href: string; label: string; icon: React.ReactNode };
 const baseItems: NavItem[] = [
   { href: "/dashboard", label: "Indicadores", icon: <BarChart3 className="size-4" /> },
   { href: "/registries", label: "Cadastros", icon: <Database className="size-4" /> },
-  { href: "/users", label: "Usuários", icon: <Users className="size-4" /> },
 ];
+
+const usersItem: NavItem = {
+  href: "/users",
+  label: "Usuários",
+  icon: <Users className="size-4" />,
+};
 
 const super77Item: NavItem = {
   href: "/super77",
@@ -56,11 +61,12 @@ export function NavLinks({ canSuper77 }: { canSuper77: boolean }) {
           <p className="mb-1.5 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[--sidebar-muted]">
             Equipe 77
           </p>
-          {(() => {
-            const active = isActive(super77Item.href);
+          {[usersItem, super77Item].map((item) => {
+            const active = isActive(item.href);
             return (
               <Link
-                href={super77Item.href}
+                key={item.href}
+                href={item.href}
                 className={`relative flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
                   active
                     ? "sidebar-nav-item-active"
@@ -72,11 +78,11 @@ export function NavLinks({ canSuper77 }: { canSuper77: boolean }) {
                     : undefined
                 }
               >
-                <span className={active ? "opacity-100" : "opacity-60"}>{super77Item.icon}</span>
-                {super77Item.label}
+                <span className={active ? "opacity-100" : "opacity-60"}>{item.icon}</span>
+                {item.label}
               </Link>
             );
-          })()}
+          })}
         </>
       )}
     </nav>

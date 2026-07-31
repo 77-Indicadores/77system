@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BRAND } from "@/lib/brand";
 import { consumePasswordResetToken, validatePasswordResetToken } from "@/domains/auth/reset";
 
 export default async function ResetPasswordPage({
@@ -36,9 +37,10 @@ export default async function ResetPasswordPage({
             className="text-[2.5rem] font-black leading-none tracking-[-0.06em]"
             style={{ color: "var(--sidebar-bg)" }}
           >
-            7<span style={{ color: "hsl(var(--primary))" }}>7</span>
+            {BRAND.short.slice(0, -1)}<span style={{ color: "hsl(var(--primary))" }}>{BRAND.short.slice(-1)}</span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Nova senha</p>
+          <p className="mt-0.5 text-[13px] font-semibold text-card-foreground">{BRAND.name}</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">Nova senha</p>
         </div>
 
         {done ? (
