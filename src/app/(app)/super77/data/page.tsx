@@ -1,6 +1,6 @@
-import { CheckCircle2, Clock, DatabaseZap, RefreshCcw, XCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CheckCircle2, Clock, DatabaseZap, XCircle, Loader2 } from "lucide-react";
 import { auth } from "@/auth";
+import { SyncButton } from "./sync-button";
 import { requirePermission } from "@/domains/rbac/guards";
 import { listDataOperations, queueDataSync } from "@/domains/data/service";
 import { auditLog } from "@/domains/super77/audit";
@@ -66,10 +66,7 @@ export default async function Super77DataPage() {
                 </div>
                 <form action={refresh}>
                   <input name="key" type="hidden" value={source.key} />
-                  <Button type="submit" variant="outline" size="sm">
-                    <RefreshCcw className="mr-2 size-3.5" />
-                    Sincronizar agora
-                  </Button>
+                  <SyncButton />
                 </form>
               </div>
 

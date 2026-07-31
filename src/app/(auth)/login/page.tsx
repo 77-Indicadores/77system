@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { signIn } from "@/auth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BRAND } from "@/lib/brand";
+import { LoginSubmitButton } from "./submit-button";
 
 const ERROR_MESSAGES: Record<string, string> = {
   CredentialsSignin: "E-mail ou senha incorretos.",
@@ -51,9 +51,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Senha
           <Input className="mt-1.5" name="password" type="password" autoComplete="current-password" required />
         </label>
-        <Button className="w-full" type="submit">
-          Entrar
-        </Button>
+        <LoginSubmitButton />
         <p className="mt-5 text-center text-[12px] text-muted-foreground">
           <Link href="/forgot-password" className="font-semibold hover:underline">
             Esqueci minha senha

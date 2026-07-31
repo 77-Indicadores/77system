@@ -210,7 +210,8 @@ export function UsersClient({
           </div>
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-opacity hover:opacity-90"
+            disabled={isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             <UserPlus className="size-4" />
             Novo usuário

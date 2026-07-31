@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLinks } from "@/components/nav-links";
+import { RouteProgress } from "@/components/route-progress";
 import { BRAND } from "@/lib/brand";
 
 const SECTION_LABELS: Record<string, string> = {
@@ -63,6 +64,7 @@ export function AppShell({ children, canSuper77, canManageUsers, canIndicators, 
   // ── Normal mode: sidebar layout ──
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <RouteProgress />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-[13px] focus:font-semibold focus:text-primary-foreground"

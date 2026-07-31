@@ -12,6 +12,7 @@ function NavLink({ item }: { item: NavItem }) {
   return (
     <Link
       href={item.href}
+      onClick={() => { if (!active) window.dispatchEvent(new Event("nav:start")); }}
       className={`relative flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors ${
         active
           ? "sidebar-nav-item-active bg-[--sidebar-accent-dim] text-[--sidebar-text-active]"
