@@ -11,6 +11,7 @@ import { LineTrendCard } from "@/components/widgets/line-trend-card";
 import { StackedMonthBars } from "@/components/widgets/stacked-month-bars";
 import { getFinancialRevenueSummary } from "@/domains/indicators/financial";
 import { formatCurrency, formatPercent } from "@/domains/indicators/metrics";
+import { getFreshnessSeconds } from "@/lib/data-contract";
 import { listVisibleDashboardGroups, requireDashboardAccess } from "@/domains/indicators/service";
 
 export default async function DashboardScreenPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -20,7 +21,10 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
     listVisibleDashboardGroups(),
   ]);
   if (!screen) notFound();
-  const summary = await getFinancialRevenueSummary();
+  const [summary, freshnessSeconds] = await Promise.all([
+    getFinancialRevenueSummary(),
+    Promise.resolve(getFreshnessSeconds("financial-revenue-summary")),
+  ]);
 
   const monthLabel = summary.rows.at(-1)?.date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") ?? "Atual";
   const target = 260000;
@@ -63,7 +67,7 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
         <div className="flex-1" />
 
         {/* Actions */}
-        <FreshnessBadge updatedAt={summary.updatedAt} freshnessSeconds={900} />
+        <FreshnessBadge updatedAt={summary.updatedAt} freshnessSeconds={freshnessSeconds} />
         <a
           className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 px-3 text-[12px] font-medium text-white/70 hover:bg-white/10"
           href="/api/exports/excel"
