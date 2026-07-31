@@ -61,7 +61,7 @@ async function ForgotPasswordContent({
 
   if (sent) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-[13px] text-green-800">
+      <div className="rounded-lg border bg-muted p-4 text-[13px] text-card-foreground">
         Se esse e-mail estiver cadastrado, você receberá as instruções em breve. Verifique sua caixa de entrada.
       </div>
     );

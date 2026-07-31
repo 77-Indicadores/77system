@@ -45,7 +45,7 @@ export default async function ResetPasswordPage({
 
         {done ? (
           <>
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-[13px] text-green-800">
+            <div className="rounded-lg border bg-muted p-4 text-[13px] text-card-foreground">
               Senha redefinida com sucesso! Faça login com sua nova senha.
             </div>
             <Link
@@ -82,12 +82,12 @@ async function ResetForm({
       <input type="hidden" name="token" value={token} />
 
       {error === "invalid" && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">
+        <p className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-[12px] text-destructive">
           As senhas não coincidem ou são muito curtas (mínimo 8 caracteres).
         </p>
       )}
       {error === "expired" && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">
+        <p className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-[12px] text-destructive">
           Link expirado ou já utilizado.{" "}
           <Link href="/forgot-password" className="font-semibold underline">
             Solicite um novo.
