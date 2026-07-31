@@ -17,13 +17,15 @@ export function getCatworldConfig(): CatworldConfig {
   };
 }
 
-export async function checkCatworldHealth(): Promise<"online" | "indisponivel" | "nao_configurado"> {
+export type CatworldHealth = "online" | "indisponível" | "não configurado";
+
+export async function checkCatworldHealth(): Promise<CatworldHealth> {
   const { baseUrl, isConfigured } = getCatworldConfig();
-  if (!isConfigured) return "nao_configurado";
+  if (!isConfigured) return "não configurado";
   try {
     const response = await fetch(`${baseUrl}/health`, { cache: "no-store", signal: AbortSignal.timeout(5000) });
-    return response.ok ? "online" : "indisponivel";
+    return response.ok ? "online" : "indisponível";
   } catch {
-    return "indisponivel";
+    return "indisponível";
   }
 }

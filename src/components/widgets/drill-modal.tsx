@@ -19,7 +19,7 @@ type Props = {
 };
 
 const TONE_CLASS: Record<string, string> = {
-  up: "text-green-600",
+  up: "text-green-600 dark:text-green-400",
   down: "text-primary",
   neutral: "text-card-foreground",
 };
@@ -71,6 +71,7 @@ export function DrillModal({ open, onClose, title, subtitle, chips, columns, row
             )}
             <button
               type="button"
+              aria-label="Fechar"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-md border bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
             >

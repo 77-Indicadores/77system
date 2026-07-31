@@ -16,6 +16,7 @@ export default async function CatworldPage() {
         <h2 className="font-semibold">Status do serviço</h2>
         <div className="mt-3 grid gap-2 text-sm">
           <StatusRow label="catworld-service" value={health} ok={health === "online"} />
+
           <StatusRow label="CATWORLD_BASE_URL" value={config.baseUrl || "não definido"} ok={config.baseUrl.length > 0} />
           <StatusRow label="CATWORLD_TOKEN" value={config.token ? "configurado" : "não definido"} ok={config.token.length > 0} />
         </div>
@@ -34,7 +35,7 @@ function StatusRow({ label, value, ok }: { label: string; value: string; ok: boo
   return (
     <div className="flex items-center justify-between gap-4 rounded border px-3 py-2">
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
-      <span className={`text-xs font-semibold ${ok ? "text-green-700" : "text-red-600"}`}>{value}</span>
+      <span className={`text-xs font-semibold ${ok ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{value}</span>
     </div>
   );
 }

@@ -94,7 +94,7 @@ function RoleBadge({ roleKey }: { roleKey: RoleKey | null }) {
 function StatusDot({ status }: { status: "ACTIVE" | "DISABLED" }) {
   if (status === "ACTIVE") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-green-600">
+      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-green-600 dark:text-green-400">
         <CircleDot className="size-3.5" /> Ativo
       </span>
     );
@@ -347,7 +347,7 @@ export function UsersClient({
         >
           <div className="mb-5 flex items-center justify-between">
             <h2 id="create-dialog-title" className="text-lg font-black">Novo usuário</h2>
-            <button onClick={closePanel} className="grid size-8 place-items-center rounded-md hover:bg-muted">
+            <button aria-label="Fechar" onClick={closePanel} className="grid size-8 place-items-center rounded-md hover:bg-muted">
               <X className="size-4" />
             </button>
           </div>
@@ -453,7 +453,7 @@ export function UsersClient({
                 <p className="text-[12px] text-muted-foreground">{editUser.email}</p>
               </div>
             </div>
-            <button onClick={closePanel} className="grid size-8 place-items-center rounded-md hover:bg-muted">
+            <button aria-label="Fechar" onClick={closePanel} className="grid size-8 place-items-center rounded-md hover:bg-muted">
               <X className="size-4" />
             </button>
           </div>

@@ -14,7 +14,7 @@ export function MetricHeroCard({
   return (
     <section
       className={cn(
-        "rounded-lg border bg-white p-4 text-foreground shadow-sm",
+        "rounded-lg border bg-card p-4 text-foreground",
         tone === "red" && "bg-red-500/15",
         tone === "blue" && "bg-blue-500/15",
         tone === "orange" && "bg-amber-500/15"

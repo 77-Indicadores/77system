@@ -46,7 +46,7 @@ function mom(curr: number, prev: number | undefined): string {
 
 function momColor(curr: number, prev: number | undefined): string {
   if (prev == null || prev === 0) return "text-muted-foreground";
-  return curr >= prev ? "text-green-600" : "text-primary";
+  return curr >= prev ? "text-green-600 dark:text-green-400" : "text-primary";
 }
 
 export function MatrixTable({ columns, rows, formatValue, onDrill, filterDimension }: Props) {
@@ -61,18 +61,18 @@ export function MatrixTable({ columns, rows, formatValue, onDrill, filterDimensi
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr className="border-b">
-            <th className="sticky left-0 bg-card py-2 pl-2 pr-4 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            <th scope="col" className="sticky left-0 bg-card py-2 pl-2 pr-4 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Conta
             </th>
             {columns.map((col, i) => (
-              <th key={col.id} className="py-2 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              <th scope="col" key={col.id} className="py-2 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 {col.label}
                 {hasMoM && col.showMoM && i > 0 && (
                   <span className="ml-1 text-[9px] font-semibold text-muted-foreground/60">AH%</span>
                 )}
               </th>
             ))}
-            <th className="py-2 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            <th scope="col" className="py-2 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Total
             </th>
           </tr>
@@ -102,7 +102,7 @@ export function MatrixTable({ columns, rows, formatValue, onDrill, filterDimensi
                 : row.isSubtotal
                   ? "bg-muted/10 font-bold border-b-2"
                   : row.highlight === "positive"
-                    ? "text-green-700"
+                    ? "text-green-700 dark:text-green-400"
                     : row.highlight === "negative"
                       ? "text-primary"
                       : "";

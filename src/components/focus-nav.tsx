@@ -89,6 +89,7 @@ export function FocusNav({ groups, currentScreenSlug, currentScreenName, current
             Telas
           </p>
           <button
+            aria-label="Fechar navegação"
             onClick={() => setOpen(false)}
             className="grid size-6 place-items-center rounded-md transition-colors hover:bg-white/10"
             style={{ color: "var(--sidebar-muted)" }}
