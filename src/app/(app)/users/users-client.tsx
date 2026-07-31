@@ -132,6 +132,7 @@ export function UsersClient({
   const [eName, setEName] = useState("");
   const [eEmail, setEEmail] = useState("");
   const [eRole, setERole] = useState<RoleKey>("operador");
+  const [ePendingRole, setEPendingRole] = useState<RoleKey | null>(null);
   const [eScopeDim, setEScopeDim] = useState("");
   const [eScopeVals, setEScopeVals] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -156,6 +157,7 @@ export function UsersClient({
     setEName(user.name ?? "");
     setEEmail(user.email);
     setERole(userRoleKey(user) ?? "operador");
+    setEPendingRole(null);
     setEScopeDim(""); setEScopeVals("");
     setConfirmDelete(false);
     setEError(""); setESuccess("");
@@ -512,10 +514,7 @@ export function UsersClient({
                           name="edit-role"
                           value={r.key}
                           checked={eRole === r.key}
-                          onChange={() => {
-                            setERole(r.key);
-                            run(() => actionSetRole(editUser.id, r.key));
-                          }}
+                          onChange={() => setEPendingRole(r.key)
                         />
                         <div className={`mt-0.5 size-4 shrink-0 rounded-full border-2 ${eRole === r.key ? "border-primary bg-primary" : "border-muted-foreground/40"}`} />
                         <div>
@@ -524,6 +523,30 @@ export function UsersClient({
                         </div>
                       </label>
                     ))}
+                  </div>
+                )}
+                {ePendingRole && ePendingRole !== eRole && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                    <span className="flex-1 text-[12px] font-semibold text-primary">
+                      Alterar para {ROLES.find((r) => r.key === ePendingRole)?.label}?
+                    </span>
+                    <button
+                      disabled={isPending}
+                      onClick={() => run(() => actionSetRole(editUser.id, ePendingRole!), () => {
+                        setERole(ePendingRole!);
+                        setEPendingRole(null);
+                        setESuccess("Papel alterado.");
+                      })}
+                      className="rounded-md bg-primary px-3 py-1 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+                    >
+                      {isPending ? <Loader2 className="size-3 animate-spin" /> : "Confirmar"}
+                    </button>
+                    <button
+                      onClick={() => setEPendingRole(null)}
+                      className="rounded-md border px-3 py-1 text-[12px] font-semibold hover:bg-muted"
+                    >
+                      Cancelar
+                    </button>
                   </div>
                 )}
               </section>

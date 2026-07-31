@@ -92,7 +92,7 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
       {/* ── Summary card ── */}
       <DenseSummaryCard
         title="Resumo de Receita"
-        subtitle="Visao do periodo com dados materializados e atualizacao controlada"
+        subtitle="Visão do período com dados materializados e atualização controlada"
         badge={`Acumulado · ${currentYear}`}
         stats={[
           { label: "receita acumulada", value: formatCurrency(summary.currentRevenue).replace("R$", "").trim() },
@@ -111,7 +111,7 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
 
       {/* ── Charts row 1 ── */}
       <div className="grid gap-4 xl:grid-cols-3">
-        <AnalyticsPanel title="Receita por mes" subtitle="Volume materializado por competencia">
+        <AnalyticsPanel title="Receita por mês" subtitle="Volume materializado por competência">
           <StackedMonthBars
             rows={summary.rows.map((row) => ({
               label: row.date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""),
@@ -124,12 +124,12 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
         <AnalyticsPanel
           className="xl:col-span-1"
           legend={<span><span className="text-primary">●</span> Receita</span>}
-          title="Evolucao por mes"
+          title="Evolução por mês"
           subtitle="Linha de receita materializada"
         >
           <LineTrendCard points={summary.trendPoints} />
         </AnalyticsPanel>
-        <AnalyticsPanel title="Distribuicao por faixa" subtitle="Participacao por fonte">
+        <AnalyticsPanel title="Distribuição por faixa" subtitle="Participação por fonte">
           <HorizontalBars
             rows={[
               { label: "Catworld", value: Math.round(distributionTotal * 0.72), percent: 72 },
@@ -173,12 +173,15 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
 
 function FilterPill({ label, value }: { label: string; value: string }) {
   return (
-    <button className="flex h-10 min-w-32 items-center justify-between gap-3 rounded-lg border bg-card px-3 text-left hover:bg-muted">
+    <div
+      aria-label={`${label}: ${value}`}
+      className="flex h-10 min-w-32 cursor-default items-center justify-between gap-3 rounded-lg border bg-card px-3 text-left"
+    >
       <span>
         <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
         <span className="text-[13px] font-semibold">{value}</span>
       </span>
       {label === "Competencia" ? <CalendarDays className="size-3.5 text-muted-foreground" /> : <ChevronDown className="size-3.5 text-muted-foreground" />}
-    </button>
+    </div>
   );
 }
