@@ -1,27 +1,25 @@
-/**
- * MatrixTable — financial/DRE matrix with group rows, subtotals, totals,
- * highlight rows, optional MoM% column, and drill callback per row.
- *
- * This is a server or client component; it emits no browser APIs itself.
- * Wrap in a "use client" parent if you need the drill callback.
- */
+"use client";
+
+import { useDashboardFilter } from "./dashboard-filter-context";
 
 export type MatrixRow = {
   id: string;
   label: string;
-  values: Record<string, number>;  // key = column id
+  values: Record<string, number>;
   total?: number;
-  isGroup?: boolean;     // group header (bold, bg-muted)
-  isSubtotal?: boolean;  // subtotal row (semi-bold, border-b-2)
-  isTotal?: boolean;     // grand total (dark bg)
+  isGroup?: boolean;
+  isSubtotal?: boolean;
+  isTotal?: boolean;
   highlight?: "positive" | "negative" | "neutral";
   drillable?: boolean;
+  /** Value emitted to cross-filter on click. Defaults to row.label. */
+  filterValue?: string;
 };
 
 export type MatrixColumn = {
   id: string;
   label: string;
-  showMoM?: boolean; // show % vs previous column
+  showMoM?: boolean;
 };
 
 type Props = {
@@ -29,6 +27,8 @@ type Props = {
   rows: MatrixRow[];
   formatValue?: (v: number) => string;
   onDrill?: (row: MatrixRow) => void;
+  /** Cross-filter dimension emitted when a drillable row is clicked (e.g. "obra", "conta"). */
+  filterDimension?: string;
 };
 
 const defaultFormat = new Intl.NumberFormat("pt-BR", {
@@ -49,9 +49,12 @@ function momColor(curr: number, prev: number | undefined): string {
   return curr >= prev ? "text-green-600" : "text-primary";
 }
 
-export function MatrixTable({ columns, rows, formatValue, onDrill }: Props) {
+export function MatrixTable({ columns, rows, formatValue, onDrill, filterDimension }: Props) {
   const fmt = formatValue ?? ((v: number) => defaultFormat.format(v));
   const hasMoM = columns.some((c) => c.showMoM);
+  const { setFilter, getActive, isActive } = useDashboardFilter();
+
+  const activeValue = filterDimension ? getActive(filterDimension) : null;
 
   return (
     <div className="overflow-x-auto">
@@ -79,18 +82,20 @@ export function MatrixTable({ columns, rows, formatValue, onDrill }: Props) {
             if (row.isGroup) {
               return (
                 <tr key={row.id} className="border-b bg-muted/40">
-                  <td
-                    colSpan={columns.length + 2}
-                    className="py-2 pl-2 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground"
-                  >
+                  <td colSpan={columns.length + 2} className="py-2 pl-2 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">
                     {row.label}
                   </td>
                 </tr>
               );
             }
 
-            const isClickable = !!onDrill && row.drillable;
+            const filterVal = row.filterValue ?? row.label;
+            const isClickable = (!!onDrill && row.drillable) || (!!filterDimension && !row.isTotal && !row.isSubtotal);
+            const isSelected = filterDimension ? isActive(filterDimension, filterVal) : false;
+            const isDimmed = activeValue !== null && !isSelected && !row.isTotal && !row.isSubtotal && !row.isGroup;
+
             const totalVal = row.total ?? columns.reduce((s, c) => s + (row.values[c.id] ?? 0), 0);
+
             const highlightClass =
               row.isTotal
                 ? "bg-[hsl(222_47%_20%)] text-white font-black"
@@ -102,22 +107,21 @@ export function MatrixTable({ columns, rows, formatValue, onDrill }: Props) {
                       ? "text-primary"
                       : "";
 
+            function handleClick() {
+              if (filterDimension && !row.isTotal && !row.isSubtotal) {
+                setFilter(filterDimension, filterVal, row.label);
+              }
+              if (onDrill && row.drillable) onDrill(row);
+            }
+
             return (
               <tr
                 key={row.id}
-                onClick={isClickable ? () => onDrill!(row) : undefined}
-                className={`border-b ${highlightClass} ${isClickable ? "cursor-pointer hover:bg-muted/30" : "hover:bg-muted/20"}`}
+                onClick={isClickable ? handleClick : undefined}
+                className={`border-b transition-opacity ${highlightClass} ${isDimmed ? "opacity-35" : ""} ${isSelected ? "ring-1 ring-inset ring-primary/30" : ""} ${isClickable ? "cursor-pointer hover:bg-muted/30" : "hover:bg-muted/20"}`}
               >
                 <td className={`sticky left-0 py-1.5 pl-4 pr-4 ${row.isTotal ? "bg-[hsl(222_47%_20%)]" : "bg-card"}`}>
-                  {row.isTotal ? row.label : (
-                    <>
-                      {row.isSubtotal ? (
-                        <span className="font-bold">{row.label}</span>
-                      ) : (
-                        row.label
-                      )}
-                    </>
-                  )}
+                  {row.isSubtotal ? <span className="font-bold">{row.label}</span> : row.label}
                 </td>
                 {columns.map((col, i) => {
                   const v = row.values[col.id] ?? 0;
@@ -126,16 +130,12 @@ export function MatrixTable({ columns, rows, formatValue, onDrill }: Props) {
                     <td key={col.id} className="py-1.5 text-right tabular-nums">
                       {fmt(v)}
                       {hasMoM && col.showMoM && i > 0 && (
-                        <span className={`ml-1 text-[10px] ${momColor(v, prev)}`}>
-                          {mom(v, prev)}
-                        </span>
+                        <span className={`ml-1 text-[10px] ${momColor(v, prev)}`}>{mom(v, prev)}</span>
                       )}
                     </td>
                   );
                 })}
-                <td className="py-1.5 text-right font-bold tabular-nums">
-                  {fmt(totalVal)}
-                </td>
+                <td className="py-1.5 text-right font-bold tabular-nums">{fmt(totalVal)}</td>
               </tr>
             );
           })}
