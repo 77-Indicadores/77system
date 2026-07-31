@@ -92,3 +92,60 @@ permissions:
 - A UI deve esconder o que o usuario nao pode ver.
 - O backend deve validar permissao sempre, mesmo quando a UI ja escondeu.
 - `super77` deve poder acessar areas tecnicas, mas isso ainda deve passar pelo engine de permissao.
+
+---
+
+## Segregação de dados (Row-Level Security)
+
+RBAC controla acesso a *telas*. Segregação controla acesso a *linhas de dado* dentro de uma tela.
+
+Use quando um usuário deve ver apenas parte dos dados — por empresa, filial, obra, correntista etc.
+
+### Modelo
+
+```txt
+UserScope: userId | dimension | value
+```
+
+- `dimension` — nome lógico da dimensão (ex: `"empresa"`, `"filial"`, `"obra"`)
+- `value` — valor exato permitido no campo materializado
+
+Usuário sem nenhum scope para uma dimensão vê tudo (comportamento admin).
+Usuário com scopes vê apenas linhas onde o campo da dimensão está na lista de values.
+
+### Uso em serviços de domínio
+
+```ts
+import { getCurrentUserScopeMap, scopeFilter } from "@/domains/rbac/scope";
+
+const scope = await getCurrentUserScopeMap();
+
+const rows = await prisma.infratechFaturamento.findMany({
+  where: {
+    ...scopeFilter(scope, "empresa", "empresaNome"),
+    // outros filtros normais
+    ano,
+  },
+});
+```
+
+### API de gestão
+
+```
+GET    /api/users/:id/scopes                         lista scopes do usuário
+PUT    /api/users/:id/scopes  { dimension, values }  substitui scopes de uma dimensão
+DELETE /api/users/:id/scopes?dimension=empresa       limpa uma dimensão (ou todas)
+```
+
+Requer permissão `system.settings.manage`.
+
+### Dimensões convencionais
+
+| Dimensão | Campo típico no model Prisma |
+|---|---|
+| `empresa` | `empresaNome` |
+| `filial` | `filialCodigo` |
+| `obra` | `obraCodigo` |
+| `correntista` | `correntistaNome` |
+
+Documente as dimensões usadas por projeto no contrato de dados correspondente.

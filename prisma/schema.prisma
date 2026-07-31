@@ -42,6 +42,29 @@ model User {
   roles        UserRole[]
   accounts     Account[]
   sessions     Session[]
+  scopes       UserScope[]
+}
+
+/**
+ * Row-level data segregation.
+ *
+ * A user with no scopes for a dimension sees ALL values (admin behaviour).
+ * A user with scopes sees only matching rows.
+ *
+ * Example: dimension="empresa", value="INFRATECH SP"
+ * Use scopeFilter() from src/domains/rbac/scope.ts in every domain query.
+ */
+model UserScope {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dimension String   // e.g. "empresa", "filial", "obra", "correntista"
+  value     String   // exact value to match in the materialized table field
+  createdAt DateTime @default(now())
+
+  @@unique([userId, dimension, value])
+  @@index([userId])
+  @@map("user_scopes")
 }
 
 model Role {

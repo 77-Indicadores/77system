@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 
 export type TrendPoint = {
   id: string;
@@ -15,7 +15,6 @@ export type TrendSeries = {
   color?: string;
 };
 
-// Fixed categorical order — never cycle
 const SERIES_COLORS = [
   "hsl(var(--primary))",
   "hsl(142 71% 45%)",
@@ -30,16 +29,22 @@ const compactCurrency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
-// Single-series: pass points. Multi-series: pass series array.
+type TooltipState = {
+  idx: number;
+  screenX: number;
+  screenY: number;
+} | null;
+
 type Props =
   | { points: TrendPoint[]; series?: never; framed?: boolean }
   | { series: TrendSeries[]; points?: never; framed?: boolean };
 
 export function LineTrendCard(props: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [svgWidth, setSvgWidth] = useState(900);
+  const [tooltip, setTooltip] = useState<TooltipState>(null);
 
-  // Responsive width via ResizeObserver — fixes SVG clipping on narrow cards
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -76,15 +81,39 @@ export function LineTrendCard(props: Props) {
     return viewH - paddingBottom - ((value - min) / range) * plotH;
   }
 
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const svgEl = svgRef.current;
+      if (!svgEl || xLabels.length === 0) return;
+      const rect = svgEl.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * svgWidth;
+      const total = xLabels.length;
+      const idx = Math.max(
+        0,
+        Math.min(Math.round(((mouseX - paddingX) / plotW) * (total - 1)), total - 1)
+      );
+      // Convert SVG coords to rendered pixel coords (for tooltip positioning)
+      const svgX = cx(idx, total);
+      const minY = Math.min(...series.map((s) => cy(s.points[idx]?.value ?? min)));
+      const screenX = (svgX / svgWidth) * rect.width;
+      const screenY = (minY / viewH) * rect.height;
+      setTooltip({ idx, screenX, screenY });
+    },
+    [svgWidth, xLabels.length, plotW, paddingX, series, min]
+  );
+
   const chart = (
-    <div ref={containerRef} className="w-full">
+    <div ref={containerRef} className="relative w-full">
       <svg
+        ref={svgRef}
         className="h-[220px] w-full overflow-visible"
         viewBox={`0 0 ${svgWidth} ${viewH}`}
         role="img"
         aria-label="Gráfico de tendência"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setTooltip(null)}
       >
-        {/* Horizontal grid + Y labels */}
+        {/* Grid + Y labels */}
         {[0, 1, 2, 3].map((i) => {
           const y = paddingTop + (i * plotH) / 3;
           const v = max - (i * range) / 3;
@@ -98,7 +127,20 @@ export function LineTrendCard(props: Props) {
           );
         })}
 
-        {/* Series lines */}
+        {/* Crosshair vertical line on hover */}
+        {tooltip !== null && (
+          <line
+            x1={cx(tooltip.idx, xLabels.length)}
+            x2={cx(tooltip.idx, xLabels.length)}
+            y1={paddingTop}
+            y2={viewH - paddingBottom}
+            stroke="hsl(215 20% 70%)"
+            strokeWidth="1"
+            strokeDasharray="4 3"
+          />
+        )}
+
+        {/* Series */}
         {series.map((s, si) => {
           const color = s.color ?? SERIES_COLORS[si % SERIES_COLORS.length];
           const coords = s.points.map((p, i) => ({ ...p, x: cx(i, s.points.length), y: cy(p.value) }));
@@ -106,7 +148,6 @@ export function LineTrendCard(props: Props) {
 
           return (
             <g key={s.id}>
-              {/* Area fill only for single series */}
               {!multiSeries && (
                 <path
                   d={`${path} L ${coords.at(-1)?.x ?? paddingX} ${viewH - paddingBottom} L ${paddingX} ${viewH - paddingBottom} Z`}
@@ -118,20 +159,20 @@ export function LineTrendCard(props: Props) {
               {coords.map((c, i) => {
                 const isLast = i === coords.length - 1;
                 const isPeak = c.value === max;
-                // Only label last point + global peak to avoid clutter
-                const showLabel = (isLast || isPeak) && c.value !== 0;
+                const isHovered = tooltip?.idx === i;
+                const showLabel = (isLast || isPeak) && c.value !== 0 && !isHovered;
                 return (
                   <g key={c.id}>
-                    <circle cx={c.x} cy={c.y} fill="hsl(var(--card))" r={multiSeries ? 3.5 : 5} stroke={color} strokeWidth="2.5" />
+                    <circle
+                      cx={c.x}
+                      cy={c.y}
+                      fill="hsl(var(--card))"
+                      r={isHovered ? 6 : multiSeries ? 3.5 : 5}
+                      stroke={color}
+                      strokeWidth={isHovered ? 3 : 2.5}
+                    />
                     {showLabel && (
-                      <text
-                        fill="hsl(var(--card-foreground))"
-                        fontSize="11"
-                        fontWeight="800"
-                        textAnchor="middle"
-                        x={c.x}
-                        y={Math.max(c.y - 11, 14)}
-                      >
+                      <text fill="hsl(var(--card-foreground))" fontSize="11" fontWeight="800" textAnchor="middle" x={c.x} y={Math.max(c.y - 11, 14)}>
                         {compactCurrency.format(c.value)}
                       </text>
                     )}
@@ -142,13 +183,13 @@ export function LineTrendCard(props: Props) {
           );
         })}
 
-        {/* X-axis labels */}
+        {/* X labels */}
         {xLabels.map((p, i) => (
           <text
             key={p.id}
-            fill="hsl(var(--muted-foreground))"
+            fill={tooltip?.idx === i ? "hsl(var(--card-foreground))" : "hsl(var(--muted-foreground))"}
             fontSize="11"
-            fontWeight="600"
+            fontWeight={tooltip?.idx === i ? "800" : "600"}
             textAnchor="middle"
             x={cx(i, xLabels.length)}
             y={viewH - 6}
@@ -158,7 +199,38 @@ export function LineTrendCard(props: Props) {
         ))}
       </svg>
 
-      {/* Legend — only for multi-series */}
+      {/* Tooltip overlay */}
+      {tooltip !== null && (
+        <div
+          className="pointer-events-none absolute z-20 min-w-[120px] rounded-md border bg-card px-3 py-2 shadow-lg"
+          style={{
+            left: Math.min(tooltip.screenX + 12, svgWidth - 140),
+            top: Math.max(tooltip.screenY - 16, 0),
+          }}
+        >
+          <p className="mb-1.5 text-[11px] font-bold text-muted-foreground">
+            {xLabels[tooltip.idx]?.label}
+          </p>
+          {series.map((s, si) => {
+            const color = s.color ?? SERIES_COLORS[si % SERIES_COLORS.length];
+            const v = s.points[tooltip.idx]?.value;
+            if (v == null) return null;
+            return (
+              <div key={s.id} className="flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 flex-shrink-0 rounded-full" style={{ background: color }} />
+                {multiSeries && (
+                  <span className="text-[11px] text-muted-foreground">{s.label}</span>
+                )}
+                <span className="ml-auto text-[12px] font-black tabular-nums text-card-foreground">
+                  {compactCurrency.format(v)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Legend — multi-series only */}
       {multiSeries && (
         <div className="mt-2 flex flex-wrap gap-3 px-1">
           {series.map((s, si) => {
@@ -176,10 +248,5 @@ export function LineTrendCard(props: Props) {
   );
 
   if (!props.framed) return chart;
-
-  return (
-    <section className="rounded-lg border bg-card p-4">
-      {chart}
-    </section>
-  );
+  return <section className="rounded-lg border bg-card p-4">{chart}</section>;
 }
