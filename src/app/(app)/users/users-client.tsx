@@ -185,6 +185,15 @@ export function UsersClient({
   const editUser = panel && typeof panel === "object" && "edit" in panel ? panel.edit : null;
   const isSelf = (user: UserRow) => user.email === currentUserEmail;
 
+  // Escape key closes panel
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closePanel();
+    }
+    if (panel) document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       <div className="space-y-5">
@@ -232,11 +241,11 @@ export function UsersClient({
             <table className="w-full text-left text-[13px]">
               <thead className="border-b bg-muted/30">
                 <tr>
-                  <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Usuário</th>
-                  <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Papel</th>
-                  <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Status</th>
-                  <th className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground md:table-cell">Restrições</th>
-                  <th className="px-5 py-3" />
+                  <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Usuário</th>
+                  <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Papel</th>
+                  <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Status</th>
+                  <th scope="col" className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground md:table-cell">Restrições</th>
+                  <th scope="col" className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -328,9 +337,14 @@ export function UsersClient({
 
       {/* ── Create modal ──────────────────────────────────────────────────── */}
       {panel === "create" && (
-        <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-6 shadow-xl">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-dialog-title"
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-6 shadow-xl"
+        >
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-black">Novo usuário</h2>
+            <h2 id="create-dialog-title" className="text-lg font-black">Novo usuário</h2>
             <button onClick={closePanel} className="grid size-8 place-items-center rounded-md hover:bg-muted">
               <X className="size-4" />
             </button>
@@ -395,7 +409,7 @@ export function UsersClient({
             </fieldset>
 
             {cError && (
-              <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[12px] text-primary">
+              <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] text-destructive">
                 {cError}
               </p>
             )}
@@ -420,14 +434,19 @@ export function UsersClient({
 
       {/* ── Edit slide-over ───────────────────────────────────────────────── */}
       {editUser && (
-        <div className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[480px] flex-col border-l bg-card shadow-2xl">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-dialog-title"
+          className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[480px] flex-col border-l bg-card shadow-2xl"
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[13px] font-black text-primary">
                 {initials(editUser)}
               </div>
-              <div>
+              <div id="edit-dialog-title">
                 <p className="font-bold leading-tight">{editUser.name ?? "—"}</p>
                 <p className="text-[12px] text-muted-foreground">{editUser.email}</p>
               </div>
@@ -622,7 +641,7 @@ export function UsersClient({
                   {!confirmDelete ? (
                     <button
                       onClick={() => setConfirmDelete(true)}
-                      className="flex w-full items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-left text-[13px] text-primary transition-colors hover:bg-primary/10"
+                      className="flex w-full items-center gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-left text-[13px] text-destructive transition-colors hover:bg-destructive/10"
                     >
                       <Trash2 className="size-4 shrink-0" />
                       <div>
@@ -631,19 +650,19 @@ export function UsersClient({
                       </div>
                     </button>
                   ) : (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                    <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
                       <div className="mb-3 flex items-center gap-2">
-                        <AlertTriangle className="size-4 text-primary" />
-                        <p className="text-[13px] font-bold text-primary">Confirmar exclusão?</p>
+                        <AlertTriangle className="size-4 text-destructive" />
+                        <p className="text-[13px] font-bold text-destructive">Confirmar exclusão?</p>
                       </div>
-                      <p className="mb-3 text-[12px] text-primary/80">
+                      <p className="mb-3 text-[12px] text-destructive/80">
                         O usuário <strong>{editUser.name ?? editUser.email}</strong> será excluído permanentemente.
                       </p>
                       <div className="flex gap-2">
                         <button
                           disabled={isPending}
                           onClick={() => run(() => actionDeleteUser(editUser.id), closePanel)}
-                          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+                          className="flex items-center gap-1.5 rounded-md bg-destructive px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
                         >
                           {isPending ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
                           Excluir
@@ -664,7 +683,7 @@ export function UsersClient({
 
           {/* Footer: feedback */}
           {(eError || eSuccess) && (
-            <div className={`border-t px-6 py-3 text-[12px] font-semibold ${eError ? "bg-primary/5 text-primary" : "bg-green-50 text-green-700"}`}>
+            <div className={`border-t px-6 py-3 text-[12px] font-semibold ${eError ? "bg-destructive/5 text-destructive" : "bg-green-500/10 text-green-600 dark:text-green-400"}`}>
               {eError || eSuccess}
             </div>
           )}

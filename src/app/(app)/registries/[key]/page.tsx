@@ -66,7 +66,7 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
             <thead className="border-b bg-muted/40 text-xs uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 {schema.fields.map((field) => (
-                  <th className="px-5 py-3" key={field.name}>{field.label ?? field.name}</th>
+                  <th scope="col" className="px-5 py-3" key={field.name}>{field.label ?? field.name}</th>
                 ))}
               </tr>
             </thead>
@@ -119,7 +119,7 @@ function coerceFieldValue(field: RegistryField, value: FormDataEntryValue | null
 }
 
 function formatCell(value: unknown) {
-  if (typeof value === "boolean") return value ? "Sim" : "Nao";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (value === null || value === undefined || value === "") return "-";
   return String(value);
 }

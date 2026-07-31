@@ -63,6 +63,12 @@ export function AppShell({ children, canSuper77, canManageUsers, canIndicators, 
   // ── Normal mode: sidebar layout ──
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-[13px] focus:font-semibold focus:text-primary-foreground"
+      >
+        Ir para conteúdo principal
+      </a>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -158,7 +164,7 @@ export function AppShell({ children, canSuper77, canManageUsers, canIndicators, 
         >
           <button
             aria-label="Abrir menu"
-            className="grid size-8 shrink-0 place-items-center rounded-md border transition-colors hover:bg-muted md:hidden"
+            className="grid size-11 shrink-0 place-items-center rounded-md border transition-colors hover:bg-muted md:hidden"
             onClick={() => setMobileOpen(true)}
           >
             <Menu className="size-4" />
@@ -173,7 +179,7 @@ export function AppShell({ children, canSuper77, canManageUsers, canIndicators, 
           )}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6 2xl:px-10">
+        <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6 2xl:px-10">
           {children}
         </main>
       </div>

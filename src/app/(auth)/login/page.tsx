@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BRAND } from "@/lib/brand";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  CredentialsSignin: "E-mail ou senha incorretos.",
+  Default: "Não foi possível fazer login. Tente novamente.",
+};
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+  const errorMessage = error ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default) : null;
+
   async function login(formData: FormData) {
     "use server";
     await signIn("credentials", {
@@ -28,6 +36,12 @@ export default function LoginPage() {
           <p className="mt-0.5 text-[13px] font-semibold text-card-foreground">{BRAND.name}</p>
           <p className="mt-0.5 text-[12px] text-muted-foreground">{BRAND.tagline}</p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-5 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-[13px] font-medium text-destructive">
+            {errorMessage}
+          </div>
+        )}
 
         <label className="mb-4 block text-sm font-semibold">
           Email

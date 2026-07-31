@@ -7,7 +7,7 @@ import { auditLog } from "@/domains/super77/audit";
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   SUCCESS: <CheckCircle2 className="size-4 text-green-500" />,
-  FAILED:  <XCircle className="size-4 text-primary" />,
+  FAILED:  <XCircle className="size-4 text-destructive" />,
   RUNNING: <Loader2 className="size-4 animate-spin text-amber-500" />,
   QUEUED:  <Clock className="size-4 text-muted-foreground" />,
 };
@@ -109,11 +109,11 @@ export default async function Super77DataPage() {
                   <table className="w-full text-left text-[12px]">
                     <thead className="border-b bg-muted/30">
                       <tr>
-                        <th className="px-3 py-2 font-bold text-muted-foreground">Job ID</th>
-                        <th className="px-3 py-2 font-bold text-muted-foreground">Status</th>
-                        <th className="px-3 py-2 font-bold text-muted-foreground">Progresso</th>
-                        <th className="px-3 py-2 font-bold text-muted-foreground">Linhas</th>
-                        <th className="px-3 py-2 font-bold text-muted-foreground">Iniciado</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Job ID</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Status</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Progresso</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Linhas</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Iniciado</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -126,7 +126,9 @@ export default async function Super77DataPage() {
                               <span>{STATUS_LABEL[job.status]}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 tabular-nums">{job.progress}%</td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {job.status === "RUNNING" ? `${job.progress}%` : "—"}
+                          </td>
                           <td className="px-3 py-2 tabular-nums">{job.rowsWritten}</td>
                           <td className="px-3 py-2 text-muted-foreground">
                             {job.startedAt

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DatabaseZap, Plug, Users } from "lucide-react";
+import { DatabaseZap, Plug } from "lucide-react";
 import { requirePermission } from "@/domains/rbac/guards";
 
 const cards = [
@@ -14,12 +14,6 @@ const cards = [
     icon: <DatabaseZap className="size-5" />,
     title: "Dados e Jobs",
     description: "Staging, materialização, cron e histórico de execuções.",
-  },
-  {
-    href: "/users",
-    icon: <Users className="size-5" />,
-    title: "Usuários",
-    description: "Gestão de usuários, papéis e segregação de dados por dimensão.",
   },
 ];
 
