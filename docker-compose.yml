@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: 77system
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
       SUPER77_EMAIL: super77@77.local
       SUPER77_PASSWORD: super77-dev-password
     ports:
-      - "3001:3000"
+      - "${APP_PORT:-3001}:3000"
     volumes:
       - .:/app
       - /app/node_modules
@@ -44,7 +44,7 @@ services:
     environment:
       CATWORLD_TIMEOUT: "30"
     ports:
-      - "8001:8001"
+      - "${CATWORLD_SERVICE_PORT:-8001}:8001"
 
 volumes:
   postgres-data:

@@ -9,7 +9,10 @@ export async function POST(request: Request) {
   await requirePermission("system.jobs.manage");
 
   const body = await request.json().catch(() => ({}));
-  const key = typeof body.key === "string" ? body.key : "catworld-financeiro";
+  if (typeof body.key !== "string" || !body.key) {
+    return NextResponse.json({ error: "Campo 'key' obrigatório" }, { status: 400 });
+  }
+  const key = body.key;
 
   const job = await queueDataSync(key, { triggeredBy: session!.user!.email! });
 
