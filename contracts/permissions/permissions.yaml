@@ -1,8 +1,9 @@
 roles:
   super77:
-    description: Equipe tecnica 77 com acesso a integracoes, logs e configuracoes.
+    description: Equipe tecnica 77 com acesso total ao sistema.
     permissions:
       - super77.access
+      - users.manage
       - integrations.catworld.view
       - integrations.catworld.manage
       - system.jobs.view
@@ -13,11 +14,25 @@ roles:
       - indicators.group.manage
       - indicators.dashboard.view
       - indicators.dashboard.manage
+      - registries.module.view
       - registries.module.manage
+      - registries.record.view
+      - registries.record.manage
       - exports.excel.create
       - exports.pdf.create
 
+  operador:
+    description: Operador do sistema com acesso configuravel a indicadores e cadastros.
+    permissions:
+      - indicators.group.view
+      - indicators.dashboard.view
+      - registries.module.view
+      - registries.record.view
+      - exports.excel.create
+
 permissions:
+  - id: users.manage
+    description: Criar, editar e desativar usuarios.
   - id: indicators.group.view
     description: Ver grupo de indicadores.
   - id: indicators.group.manage

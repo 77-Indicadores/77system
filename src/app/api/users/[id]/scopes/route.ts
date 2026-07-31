@@ -6,7 +6,7 @@ type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/users/:id/scopes — list all scope entries for a user */
 export async function GET(_req: Request, { params }: Params) {
-  await requirePermission("system.settings.manage");
+  await requirePermission("users.manage");
   const { id } = await params;
   const scopes = await getUserScopeList(id);
   return NextResponse.json(scopes);
@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
  * Pass values: [] to clear all restrictions for that dimension.
  */
 export async function PUT(req: Request, { params }: Params) {
-  await requirePermission("system.settings.manage");
+  await requirePermission("users.manage");
   const { id } = await params;
   const body = await req.json().catch(() => ({})) as { dimension?: string; values?: string[] };
 
@@ -35,7 +35,7 @@ export async function PUT(req: Request, { params }: Params) {
 
 /** DELETE /api/users/:id/scopes?dimension=empresa — clear one dimension (or all if omitted) */
 export async function DELETE(req: Request, { params }: Params) {
-  await requirePermission("system.settings.manage");
+  await requirePermission("users.manage");
   const { id } = await params;
   const dimension = new URL(req.url).searchParams.get("dimension") ?? undefined;
   await clearUserScope(id, dimension);
