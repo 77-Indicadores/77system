@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 18% 95%;
+  --foreground: 222 47% 7%;
+  --border: 220 20% 88%;
+  --muted: 220 16% 91%;
+  --muted-foreground: 215 16% 42%;
+  --primary: 350 85% 42%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 220 14% 12%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 7%;
+
+  /* Sidebar tokens */
+  --sidebar-bg: #0B0D13;
+  --sidebar-border: #1C2030;
+  --sidebar-muted: #555C78;
+  --sidebar-text: #8D94B0;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-accent: #C8102E;
+  --sidebar-accent-dim: rgba(200, 16, 46, 0.14);
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Sidebar nav active indicator */
+@layer components {
+  .sidebar-nav-item-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: var(--sidebar-accent);
+    border-radius: 0 2px 2px 0;
+  }
+}

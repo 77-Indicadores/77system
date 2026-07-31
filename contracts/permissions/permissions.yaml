@@ -1,0 +1,61 @@
+roles:
+  super77:
+    description: Equipe tecnica 77 com acesso a integracoes, logs e configuracoes.
+    permissions:
+      - super77.access
+      - integrations.catworld.view
+      - integrations.catworld.manage
+      - system.jobs.view
+      - system.jobs.manage
+      - system.logs.view
+      - system.settings.manage
+      - indicators.group.view
+      - indicators.group.manage
+      - indicators.dashboard.view
+      - indicators.dashboard.manage
+      - registries.module.manage
+      - exports.excel.create
+      - exports.pdf.create
+
+permissions:
+  - id: indicators.group.view
+    description: Ver grupo de indicadores.
+  - id: indicators.group.manage
+    description: Gerenciar grupos de indicadores.
+  - id: indicators.dashboard.view
+    description: Ver tela de dashboard.
+  - id: indicators.dashboard.manage
+    description: Gerenciar telas de dashboard.
+  - id: registries.module.view
+    description: Ver modulo de cadastro.
+  - id: registries.module.manage
+    description: Gerenciar modulo de cadastro.
+  - id: registries.record.view
+    description: Ver registros de cadastro.
+  - id: registries.record.manage
+    description: Gerenciar registros de cadastro.
+  - id: exports.excel.create
+    description: Criar exportacao Excel.
+  - id: exports.pdf.create
+    description: Criar exportacao PDF.
+  - id: integrations.catworld.view
+    description: Ver configuracao Catworld.
+  - id: integrations.catworld.manage
+    description: Gerenciar integracao Catworld.
+  - id: system.jobs.view
+    description: Ver jobs tecnicos.
+  - id: system.jobs.manage
+    description: Disparar refresh manual e gerenciar jobs tecnicos.
+  - id: system.logs.view
+    description: Ver logs tecnicos.
+  - id: system.settings.manage
+    description: Gerenciar configuracoes tecnicas.
+  - id: super77.access
+    description: Acessar area tecnica Super77.
+
+resource_types:
+  - dashboard_group
+  - dashboard_screen
+  - registry_module
+  - integration
+  - system_area

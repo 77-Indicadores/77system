@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum DataSourceType {
+  CATWORLD
+  CRUD
+  SPREADSHEET
+  SQL
+}
+
+enum DataSourceMode {
+  LIVE
+  MATERIALIZED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String?
+  passwordHash String
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  roles        UserRole[]
+  accounts     Account[]
+  sessions     Session[]
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  roles       RolePermission[]
+  policies    ResourcePolicy[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model ResourcePolicy {
+  id             String     @id @default(cuid())
+  userId         String?
+  roleId         String?
+  permissionId   String
+  resourceType   String
+  resourceId     String
+  permission     Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([roleId])
+  @@index([resourceType, resourceId])
+}
+
+model DashboardGroup {
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  description        String?
+  icon               String?
+  order              Int                 @default(0)
+  isActive           Boolean             @default(true)
+  requiredPermission String
+  screens            DashboardScreen[]
+}
+
+model DashboardScreen {
+  id                 String         @id @default(cuid())
+  groupId            String
+  name               String
+  slug               String         @unique
+  description        String?
+  layoutJson         Json
+  filtersJson        Json
+  dataContractId     String?
+  requiredPermission String
+  order              Int            @default(0)
+  isActive           Boolean        @default(true)
+  group              DashboardGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  widgets            Widget[]
+}
+
+model DataSource {
+  id             String                @id @default(cuid())
+  key            String                @unique
+  name           String
+  type           DataSourceType
+  mode           DataSourceMode        @default(MATERIALIZED)
+  connectionId   String?
+  datasetRef     String?
+  description    String?
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  schedules      DataRefreshSchedule[]
+  syncJobs       DataSyncJob[]
+}
+
+model DataRefreshSchedule {
+  id             String      @id @default(cuid())
+  dataSourceId   String
+  cronExpression String
+  timezone       String      @default("America/Sao_Paulo")
+  isActive       Boolean     @default(true)
+  nextRunAt      DateTime?
+  lastRunAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  dataSource     DataSource  @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  syncJobs       DataSyncJob[]
+
+  @@index([isActive, nextRunAt])
+}
+
+model DataSyncJob {
+  id              String               @id @default(cuid())
+  dataSourceId    String
+  scheduleId      String?
+  status          JobStatus            @default(QUEUED)
+  progress        Int                  @default(0)
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  rowsRead        Int                  @default(0)
+  rowsWritten     Int                  @default(0)
+  errorMessage    String?
+  metadataJson    Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  dataSource      DataSource           @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  schedule        DataRefreshSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([dataSourceId, createdAt])
+  @@index([status])
+}
+
+model DataContractRegistry {
+  id                    String         @id @default(cuid())
+  contractId            String         @unique
+  sourceMode            DataSourceMode @default(MATERIALIZED)
+  stagingTable          String?
+  materializedTable     String?
+  freshnessSeconds      Int            @default(900)
+  allowLiveFallback     Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model FinancialRevenueMetric {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  revenue       Decimal  @db.Decimal(14, 2)
+  customerCount Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@index([date])
+}
+
+model Widget {
+  id                      String          @id @default(cuid())
+  dashboardScreenId       String
+  type                    String
+  title                   String
+  queryRef                String?
+  visualizationConfigJson Json
+  positionJson            Json
+  refreshPolicy           String?
+  dashboardScreen         DashboardScreen @relation(fields: [dashboardScreenId], references: [id], onDelete: Cascade)
+}
+
+model RegistryDefinition {
+  id          String          @id @default(cuid())
+  key         String          @unique
+  name        String
+  description String?
+  schemaJson  Json
+  isActive    Boolean         @default(true)
+  records     RegistryRecord[]
+}
+
+model RegistryRecord {
+  id           String             @id @default(cuid())
+  registryId   String
+  dataJson      Json
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  registry      RegistryDefinition @relation(fields: [registryId], references: [id], onDelete: Cascade)
+}
+
+model IntegrationConnection {
+  id              String           @id @default(cuid())
+  provider        String
+  name            String
+  baseUrl         String?
+  encryptedToken  String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  jobs            IntegrationJob[]
+  logs            IntegrationLog[]
+
+  @@unique([provider, name])
+}
+
+model IntegrationJob {
+  id            String                 @id @default(cuid())
+  connectionId  String?
+  type          String
+  status        JobStatus              @default(QUEUED)
+  progress      Int                    @default(0)
+  message       String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  connection    IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+}
+
+model IntegrationLog {
+  id           String                 @id @default(cuid())
+  connectionId String?
+  level        String
+  message      String
+  metadataJson Json?
+  createdAt    DateTime               @default(now())
+  connection   IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String?
+  resourceId   String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ExportJob {
+  id            String    @id @default(cuid())
+  type          String
+  status        JobStatus @default(QUEUED)
+  progress      Int       @default(0)
+  filePath      String?
+  requestedBy   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([requestedBy])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expires   DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

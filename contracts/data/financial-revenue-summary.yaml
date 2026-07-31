@@ -1,0 +1,58 @@
+id: financial-revenue-summary
+name: Resumo de Receita
+domain: financeiro
+description: Contrato de exemplo para dashboard financeiro de receita.
+
+source:
+  type: catworld
+  dataset: financeiro
+  mode: materialized
+
+refresh:
+  strategy: scheduled
+  cron: "*/15 * * * *"
+  timezone: America/Sao_Paulo
+
+query:
+  ref: financial.revenue_summary
+
+staging:
+  table: stg_financial_revenue
+  retention_days: 30
+
+materialization:
+  table: metric_financial_revenue_summary
+  incremental: true
+  freshness_seconds: 900
+  allow_live_fallback: false
+
+inputs:
+  - name: start_date
+    type: date
+    required: true
+  - name: end_date
+    type: date
+    required: true
+
+outputs:
+  - name: date
+    type: date
+    required: true
+  - name: revenue
+    type: decimal
+    required: true
+  - name: customer_count
+    type: integer
+    required: false
+
+permissions:
+  - indicators.dashboard.view
+
+performance:
+  default_limit: 10000
+  timeout_seconds: 30
+  cache_ttl_seconds: 300
+
+exports:
+  excel: true
+  pdf: true

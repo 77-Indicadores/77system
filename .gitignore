@@ -1,0 +1,12 @@
+node_modules
+.next
+.next-build
+dist
+coverage
+playwright-report
+test-results
+tsconfig.tsbuildinfo
+.env
+*.log
+__pycache__
+.pytest_cache
