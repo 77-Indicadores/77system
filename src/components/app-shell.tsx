@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLinks } from "@/components/nav-links";
+import { BRAND } from "@/lib/brand";
 
 const SECTION_LABELS: Record<string, string> = {
   "/dashboard": "Indicadores",
@@ -93,15 +94,15 @@ export function AppShell({ children, canSuper77, userName, userInitials, onLogou
         >
           <div
             className="text-[2.25rem] font-black leading-none tracking-[-0.06em] text-white"
-            aria-label="77System"
+            aria-label={BRAND.name}
           >
-            7<span style={{ color: "var(--sidebar-accent)" }}>7</span>
+            {BRAND.short.slice(0, -1)}<span style={{ color: "var(--sidebar-accent)" }}>{BRAND.short.slice(-1)}</span>
           </div>
           <p
             className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.16em]"
             style={{ color: "var(--sidebar-muted)" }}
           >
-            Sistema Analítico
+            {BRAND.name}
           </p>
         </Link>
 
@@ -145,7 +146,7 @@ export function AppShell({ children, canSuper77, userName, userInitials, onLogou
         {/* Topbar */}
         <header
           className="flex h-12 shrink-0 items-center gap-3 border-b px-4 md:px-6"
-          style={{ background: "white" }}
+          style={{ background: "hsl(var(--card))" }}
         >
           <button
             aria-label="Abrir menu"
@@ -157,7 +158,7 @@ export function AppShell({ children, canSuper77, userName, userInitials, onLogou
 
           {breadcrumb && (
             <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
-              <span className="font-medium text-muted-foreground">77System</span>
+              <span className="font-medium text-muted-foreground">{BRAND.name}</span>
               <span className="text-muted-foreground/40">›</span>
               <span className="truncate font-semibold text-foreground">{breadcrumb}</span>
             </div>
