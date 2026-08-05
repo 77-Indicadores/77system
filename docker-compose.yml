@@ -38,6 +38,22 @@ services:
       catworld-service:
         condition: service_started
 
+  worker:
+    build:
+      context: .
+      target: prod
+    working_dir: /app
+    command: ["sh", "-c", "while true; do pnpm data:worker; sleep 30; done"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/77system?schema=public&connection_limit=5&pool_timeout=20}
+      CATWORLD_SERVICE_URL: ${CATWORLD_SERVICE_URL:-http://catworld-service:8001}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catworld-service:
+        condition: service_started
+    restart: unless-stopped
+
   catworld-service:
     build:
       context: ./services/catworld
