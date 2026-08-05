@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock, DatabaseZap, XCircle, Loader2 } from "lucide-react";
 import { auth } from "@/auth";
-import { SaveScheduleButton, SyncButton } from "./sync-button";
+import { SaveScheduleButton, SyncButton, JobsLivePoller, LiveClock } from "./sync-button";
 import { requirePermission } from "@/domains/rbac/guards";
 import { listDataOperations, queueDataSync, saveDataRefreshSchedule } from "@/domains/data/service";
 import { auditLog } from "@/domains/super77/audit";
@@ -20,6 +20,8 @@ const STATUS_LABEL: Record<string, string> = {
   QUEUED:  "Na fila",
 };
 
+const fmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
 export default async function Super77DataPage() {
   await requirePermission("system.jobs.view");
   const sources = await listDataOperations();
@@ -35,6 +37,7 @@ export default async function Super77DataPage() {
       resourceId: key,
       metadata: { jobId: job.id } satisfies Record<string, string>,
     });
+    revalidatePath("/super77/data");
   }
 
   async function updateSchedule(formData: FormData) {
@@ -61,14 +64,23 @@ export default async function Super77DataPage() {
     revalidatePath("/super77/data");
   }
 
+  const activeJobCount = sources.reduce(
+    (n, s) => n + s.syncJobs.filter((j) => j.status === "QUEUED" || j.status === "RUNNING").length,
+    0
+  );
+
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Super77</p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight">Dados e Jobs</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Fontes de dados, agendamentos e histórico de sincronização.
-        </p>
+      <JobsLivePoller activeJobCount={activeJobCount} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Super77</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight">Dados e Jobs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Fontes de dados, agendamentos e histórico de sincronização.
+          </p>
+        </div>
+        <LiveClock />
       </div>
 
       <div className="grid gap-4">
@@ -110,8 +122,8 @@ export default async function Super77DataPage() {
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {schedule?.isActive === false ? "Inativo" : "Ativo"}
                     {schedule?.nextRunAt
-                      ? ` · prox. ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(schedule.nextRunAt)}`
-                      : ""}
+                      ? ` · próx. ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(schedule.nextRunAt)}`
+                      : " · sem próxima execução"}
                   </p>
                 </div>
                 <div className="rounded-md border bg-muted/30 p-3">
@@ -168,7 +180,9 @@ export default async function Super77DataPage() {
                         <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Status</th>
                         <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Progresso</th>
                         <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Linhas</th>
-                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Iniciado</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Início</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Fim</th>
+                        <th scope="col" className="px-3 py-2 font-bold text-muted-foreground">Retry</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -182,13 +196,17 @@ export default async function Super77DataPage() {
                             </div>
                           </td>
                           <td className="px-3 py-2 tabular-nums">
-                            {job.status === "RUNNING" ? `${job.progress}%` : "—"}
+                            {job.status === "RUNNING" || job.status === "SUCCESS" ? `${job.progress}%` : "—"}
                           </td>
                           <td className="px-3 py-2 tabular-nums">{job.rowsWritten}</td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {job.startedAt
-                              ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(job.startedAt)
-                              : "—"}
+                          <td className="px-3 py-2 text-muted-foreground tabular-nums">
+                            {job.startedAt ? fmt.format(job.startedAt) : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground tabular-nums">
+                            {job.finishedAt ? fmt.format(job.finishedAt) : "—"}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                            {job.retryCount > 0 ? `${job.retryCount}/${job.maxRetries}` : "—"}
                           </td>
                         </tr>
                       ))}
