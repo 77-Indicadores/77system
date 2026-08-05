@@ -30,6 +30,7 @@ export function validateCronExpression(expression: string) {
 /** America/Sao_Paulo is permanently UTC-3 (no DST since 2019). */
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
 
+
 export function computeNextRun(expression: string, from = new Date()): Date {
   const parts = normalizeCronExpression(expression).split(" ");
   const [minutePart, hourPart, dayOfMonth, month, dayOfWeek] = parts;
