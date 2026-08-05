@@ -6,7 +6,7 @@ export default function DashboardScreenLoading() {
       {/* Topbar skeleton */}
       <div
         className="flex h-11 shrink-0 items-center gap-3 px-4"
-        style={{ background: "var(--sidebar-bg)", borderBottom: "1px solid var(--sidebar-border)" }}
+        style={{ background: "#1A1C23", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
       >
         <Skeleton className="size-7 rounded-md bg-white/10" />
         <Skeleton className="h-4 w-px bg-white/10" />
