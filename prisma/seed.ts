@@ -100,8 +100,8 @@ async function main() {
       name: "Catworld Financeiro",
       type: "CATWORLD",
       mode: "MATERIALIZED",
-      datasetRef: "financeiro",
-      description: "Fonte Catworld de exemplo para staging e materializacao."
+      datasetRef: process.env.CATWORLD_PROJECT_ID ?? "demo",
+      description: "Fonte Catworld de exemplo. Substitua pela integração real do cliente."
     }
   });
 

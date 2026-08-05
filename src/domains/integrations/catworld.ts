@@ -1,19 +1,26 @@
 // Catworld usa configuracao via variáveis de ambiente, não banco de dados.
-// CATWORLD_BASE_URL e CATWORLD_TOKEN devem estar no .env do deploy.
+// Variáveis obrigatórias no .env do deploy:
+//   CATWORLD_BASE_URL        ex: https://catworld.77indicadores.com.br
+//   CATWORLD_TOKEN           token de API (cw_live_...)
+//   CATWORLD_PROJECT_ID      UUID do projeto no Catworld — dá acesso a todos
+//                            os datasets do projeto sem precisar de dataset_id
 
 export type CatworldConfig = {
   baseUrl: string;
   token: string;
+  projectId: string;
   isConfigured: boolean;
 };
 
 export function getCatworldConfig(): CatworldConfig {
   const baseUrl = process.env.CATWORLD_BASE_URL ?? "";
   const token = process.env.CATWORLD_TOKEN ?? "";
+  const projectId = process.env.CATWORLD_PROJECT_ID ?? "";
   return {
     baseUrl,
     token,
-    isConfigured: baseUrl.length > 0 && token.length > 0,
+    projectId,
+    isConfigured: baseUrl.length > 0 && token.length > 0 && projectId.length > 0,
   };
 }
 

@@ -62,7 +62,35 @@ async function runNextJob() {
   }, HEARTBEAT_INTERVAL_MS);
 
   try {
+    // ── Substituir este bloco pela integração real do cliente ────────────────
+    // Padrão: use sempre project_id (nunca dataset_id). O project_id dá acesso
+    // a todos os datasets do projeto sem amarrar o worker a um dataset específico.
+    //
+    // Exemplo de chamada ao sidecar catworld-service:
+    //
+    //   if (job.dataSource.key === "catworld-<cliente>") {
+    //     const PROJECT_ID = process.env.CATWORLD_PROJECT_ID ?? "";
+    //     const res = await fetch(`${SERVICE_BASE}/query`, {
+    //       method: "POST",
+    //       headers: { "content-type": "application/json" },
+    //       body: JSON.stringify({
+    //         base_url: process.env.CATWORLD_BASE_URL,
+    //         token:    process.env.CATWORLD_TOKEN,
+    //         project_id: PROJECT_ID,   // <-- sempre project_id
+    //         sql: "SELECT TOP 100 * FROM minha_tabela",
+    //         timeout: 120,
+    //         limit: null,
+    //       }),
+    //     });
+    //     const { rows } = await res.json();
+    //     // ... salvar rows no banco
+    //   }
+    //
+    // Ver: src/domains/integrations/catworld.ts para getCatworldConfig()
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (job.dataSource.key === "catworld-financeiro") {
+      // Demo: gera dados fictícios sem chamar a API real.
       await prisma.dataSyncJob.update({
         where: { id: job.id },
         data: { progress: 30, heartbeatAt: new Date() },
