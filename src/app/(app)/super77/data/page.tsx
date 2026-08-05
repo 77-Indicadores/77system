@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
   QUEUED:  "Na fila",
 };
 
-const fmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const fmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 
 export default async function Super77DataPage() {
   await requirePermission("system.jobs.view");
@@ -122,7 +122,7 @@ export default async function Super77DataPage() {
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {schedule?.isActive === false ? "Inativo" : "Ativo"}
                     {schedule?.nextRunAt
-                      ? ` · próx. ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(schedule.nextRunAt)}`
+                      ? ` · próx. ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(schedule.nextRunAt)}`
                       : " · sem próxima execução"}
                   </p>
                 </div>

@@ -30,7 +30,7 @@ export function LiveClock() {
   const [time, setTime] = useState<string>("");
 
   useEffect(() => {
-    const fmt = new Intl.DateTimeFormat("pt-BR", { timeStyle: "medium" });
+    const fmt = new Intl.DateTimeFormat("pt-BR", { timeStyle: "medium", timeZone: "America/Sao_Paulo" });
     const tick = () => setTime(fmt.format(new Date()));
     tick();
     const id = setInterval(tick, 1_000);

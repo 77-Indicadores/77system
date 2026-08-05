@@ -27,18 +27,39 @@ export function validateCronExpression(expression: string) {
   return { ok: true as const, cronExpression: normalized };
 }
 
-// Supports simple minute intervals directly. Other valid five-field crons fall back to the next full hour.
+/** America/Sao_Paulo is permanently UTC-3 (no DST since 2019). */
+const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
+
 export function computeNextRun(expression: string, from = new Date()): Date {
   const parts = normalizeCronExpression(expression).split(" ");
-  const minutePart = parts[0];
+  const [minutePart, hourPart, dayOfMonth, month, dayOfWeek] = parts;
 
-  const match = minutePart.match(/^\*\/(\d+)$/);
-  if (match) {
-    const interval = parseInt(match[1], 10) * 60 * 1000;
-    return new Date(from.getTime() + interval);
+  // */N * * * * — run every N minutes
+  const intervalMatch = minutePart.match(/^\*\/(\d+)$/);
+  if (intervalMatch) {
+    return new Date(from.getTime() + parseInt(intervalMatch[1], 10) * 60_000);
   }
 
+  // M H * * * — daily at a fixed time expressed in America/Sao_Paulo
+  if (
+    /^\d+$/.test(minutePart) &&
+    /^\d+$/.test(hourPart) &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
+    // SP = UTC-3, so UTC hour = SP hour + 3
+    const targetHourUTC = parseInt(hourPart, 10) + 3;
+    const next = new Date(from);
+    next.setUTCHours(targetHourUTC, parseInt(minutePart, 10), 0, 0);
+    if (next.getTime() <= from.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+    return next;
+  }
+
+  // Fallback: next full UTC hour
   const next = new Date(from);
-  next.setMinutes(next.getMinutes() + 60, 0, 0);
+  next.setUTCMinutes(60, 0, 0);
   return next;
 }
+
+export { SP_OFFSET_MS };
