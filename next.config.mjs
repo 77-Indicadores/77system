@@ -1,6 +1,4 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   distDir: ".next-build",
   allowedDevOrigins: ["127.0.0.1"],
   webpack: (config, { dev }) => {

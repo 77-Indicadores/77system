@@ -515,7 +515,7 @@ export function UsersClient({
                           name="edit-role"
                           value={r.key}
                           checked={eRole === r.key}
-                          onChange={() => setEPendingRole(r.key)
+                          onChange={() => setEPendingRole(r.key)}
                         />
                         <div className={`mt-0.5 size-4 shrink-0 rounded-full border-2 ${eRole === r.key ? "border-primary bg-primary" : "border-muted-foreground/40"}`} />
                         <div>
