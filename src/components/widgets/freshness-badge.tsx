@@ -18,7 +18,13 @@ export function FreshnessBadge({
   const { label, className, dot } = config[status];
 
   const timeLabel = updatedAt
-    ? updatedAt.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })
+    ? updatedAt.toLocaleString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "short",
+        timeZone: "America/Sao_Paulo",
+      })
     : null;
 
   return (

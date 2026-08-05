@@ -63,4 +63,30 @@ export function computeNextRun(expression: string, from = new Date()): Date {
   return next;
 }
 
+/**
+ * Estima o intervalo em segundos entre execucoes de um cron.
+ * Usado pelo FreshnessBadge para derivar quando os dados ficam velhos.
+ * - intervalo por minutos (N): N * 60s
+ * - diario (M H): 86400s
+ * - fallback: 3600s
+ */
+export function cronToFreshnessSeconds(expression: string): number {
+  const parts = normalizeCronExpression(expression).split(" ");
+  if (parts.length !== 5) return 3600;
+  const [minutePart, hourPart, dayOfMonth, month, dayOfWeek] = parts;
+
+  const intervalMatch = minutePart.match(/^\*\/(\d+)$/);
+  if (intervalMatch) return parseInt(intervalMatch[1], 10) * 60;
+
+  if (
+    /^\d+$/.test(minutePart) &&
+    /^\d+$/.test(hourPart) &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) return 86400;
+
+  return 3600;
+}
+
 export { SP_OFFSET_MS };

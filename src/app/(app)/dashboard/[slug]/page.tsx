@@ -11,8 +11,9 @@ import { LineTrendCard } from "@/components/widgets/line-trend-card";
 import { StackedMonthBars } from "@/components/widgets/stacked-month-bars";
 import { getFinancialRevenueSummary } from "@/domains/indicators/financial";
 import { formatCurrency, formatPercent } from "@/domains/indicators/metrics";
-import { getFreshnessSeconds } from "@/lib/data-contract";
 import { listVisibleDashboardGroups, requireDashboardAccess } from "@/domains/indicators/service";
+import { cronToFreshnessSeconds } from "@/domains/data/schedule";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardScreenPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -21,10 +22,14 @@ export default async function DashboardScreenPage({ params }: { params: Promise<
     listVisibleDashboardGroups(),
   ]);
   if (!screen) notFound();
-  const [summary, freshnessSeconds] = await Promise.all([
+  const [summary, schedule] = await Promise.all([
     getFinancialRevenueSummary(),
-    Promise.resolve(getFreshnessSeconds("financial-revenue-summary")),
+    prisma.dataRefreshSchedule.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
+  const freshnessSeconds = schedule ? cronToFreshnessSeconds(schedule.cronExpression) : 86400;
 
   const monthLabel = summary.rows.at(-1)?.date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") ?? "Atual";
   const target = 260000;
