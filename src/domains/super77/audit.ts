@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export type AuditAction =
   | "data.refresh.triggered"
+  | "data.schedule.updated"
   | "data.sync_job.cancelled"
   | "integration.connection.updated"
   | "user.role.assigned"

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { computeNextRun } from "./schedule";
 
-// Verifica schedules ativos cujo nextRunAt já passou e enfileira DataSyncJobs.
+// Verifica schedules ativos cujo nextRunAt ja passou e enfileira DataSyncJobs.
 // Deve ser chamado periodicamente pelo worker (ex: a cada minuto).
 export async function tickScheduler(now = new Date()) {
   const due = await prisma.dataRefreshSchedule.findMany({
@@ -35,23 +36,4 @@ export async function tickScheduler(now = new Date()) {
   );
 
   return { queued: jobs.length, jobIds: jobs.map((j) => j.id) };
-}
-
-// Calcula próxima execução a partir de uma expressão cron de 5 campos.
-// Suporte básico: intervalos simples como "*/15 * * * *".
-// Para crons complexos, substituir por uma lib como `cron-parser`.
-function computeNextRun(expression: string, from: Date): Date {
-  const parts = expression.trim().split(/\s+/);
-  const minutePart = parts[0];
-
-  const match = minutePart.match(/^\*\/(\d+)$/);
-  if (match) {
-    const interval = parseInt(match[1], 10) * 60 * 1000;
-    return new Date(from.getTime() + interval);
-  }
-
-  // Fallback: próxima hora cheia
-  const next = new Date(from);
-  next.setMinutes(next.getMinutes() + 60, 0, 0);
-  return next;
 }

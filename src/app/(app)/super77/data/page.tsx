@@ -1,9 +1,10 @@
 import { CheckCircle2, Clock, DatabaseZap, XCircle, Loader2 } from "lucide-react";
 import { auth } from "@/auth";
-import { SyncButton } from "./sync-button";
+import { SaveScheduleButton, SyncButton } from "./sync-button";
 import { requirePermission } from "@/domains/rbac/guards";
-import { listDataOperations, queueDataSync } from "@/domains/data/service";
+import { listDataOperations, queueDataSync, saveDataRefreshSchedule } from "@/domains/data/service";
 import { auditLog } from "@/domains/super77/audit";
+import { revalidatePath } from "next/cache";
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   SUCCESS: <CheckCircle2 className="size-4 text-green-500" />,
@@ -36,6 +37,30 @@ export default async function Super77DataPage() {
     });
   }
 
+  async function updateSchedule(formData: FormData) {
+    "use server";
+    const session = await auth();
+    await requirePermission("system.jobs.manage");
+
+    const key = String(formData.get("key"));
+    const scheduleId = String(formData.get("scheduleId") ?? "");
+    const cronExpression = String(formData.get("cronExpression") ?? "");
+    const isActive = formData.get("isActive") === "on";
+
+    const schedule = await saveDataRefreshSchedule(key, {
+      scheduleId: scheduleId || undefined,
+      cronExpression,
+      isActive,
+    });
+
+    await auditLog(session!.user!.email!, "data.schedule.updated", {
+      resourceType: "data_refresh_schedule",
+      resourceId: schedule.id,
+      metadata: { dataSourceKey: key, cronExpression: schedule.cronExpression } satisfies Record<string, string>,
+    });
+    revalidatePath("/super77/data");
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,6 +74,7 @@ export default async function Super77DataPage() {
       <div className="grid gap-4">
         {sources.map((source) => {
           const lastJob = source.syncJobs[0];
+          const schedule = source.schedules[0];
           return (
             <section key={source.key} className="rounded-lg border bg-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -79,7 +105,13 @@ export default async function Super77DataPage() {
                 <div className="rounded-md border bg-muted/30 p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cron</p>
                   <p className="mt-1 font-mono text-[13px] font-semibold text-card-foreground">
-                    {source.schedules[0]?.cronExpression ?? "manual"}
+                    {schedule?.cronExpression ?? "manual"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {schedule?.isActive === false ? "Inativo" : "Ativo"}
+                    {schedule?.nextRunAt
+                      ? ` · prox. ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(schedule.nextRunAt)}`
+                      : ""}
                   </p>
                 </div>
                 <div className="rounded-md border bg-muted/30 p-3">
@@ -99,6 +131,32 @@ export default async function Super77DataPage() {
                   )}
                 </div>
               </div>
+
+              <form action={updateSchedule} className="mt-4 rounded-md border bg-muted/20 p-3">
+                <input name="key" type="hidden" value={source.key} />
+                <input name="scheduleId" type="hidden" value={schedule?.id ?? ""} />
+                <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Editar cron
+                    </span>
+                    <input
+                      name="cronExpression"
+                      defaultValue={schedule?.cronExpression ?? "*/15 * * * *"}
+                      placeholder="*/15 * * * *"
+                      className="mt-1 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm outline-none transition focus:border-primary"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-semibold">
+                    <input name="isActive" type="checkbox" defaultChecked={schedule?.isActive ?? true} />
+                    Ativo
+                  </label>
+                  <SaveScheduleButton />
+                </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Use 5 campos cron. Intervalos como */15 * * * * recalculam a proxima execucao automaticamente.
+                </p>
+              </form>
 
               {/* Jobs table */}
               {source.syncJobs.length > 0 && (

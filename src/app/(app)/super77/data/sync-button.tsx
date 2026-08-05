@@ -13,3 +13,12 @@ export function SyncButton() {
     </Button>
   );
 }
+
+export function SaveScheduleButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" loading={pending}>
+      {pending ? "Salvando..." : "Salvar cron"}
+    </Button>
+  );
+}
