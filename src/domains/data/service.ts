@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { computeNextRun, validateCronExpression } from "./schedule";
+export { retryDataSyncJob, cancelDataSyncJob } from "./job-lifecycle";
 
 export async function listDataOperations() {
   return prisma.dataSource.findMany({
