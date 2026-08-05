@@ -1,9 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { computeNextRun } from "./schedule";
+import { detectAndRecoverDeadJobs } from "./job-lifecycle";
 
 // Verifica schedules ativos cujo nextRunAt ja passou e enfileira DataSyncJobs.
 // Deve ser chamado periodicamente pelo worker (ex: a cada minuto).
 export async function tickScheduler(now = new Date()) {
+  // Detect and recover dead jobs before queuing new ones.
+  // This ensures stalled RUNNING jobs don't block re-scheduling.
+  const recovered = await detectAndRecoverDeadJobs(now);
+  if (recovered.requeued > 0 || recovered.failed > 0) {
+    console.log(
+      `tickScheduler: dead-job recovery — requeued=${recovered.requeued} failed=${recovered.failed}`
+    );
+  }
+
   const due = await prisma.dataRefreshSchedule.findMany({
     where: { isActive: true, nextRunAt: { lte: now } },
     include: { dataSource: true },
