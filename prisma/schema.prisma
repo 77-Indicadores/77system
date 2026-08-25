@@ -217,13 +217,18 @@ model DataContractRegistry {
 
 model FinancialRevenueMetric {
   id            String   @id @default(cuid())
-  date          DateTime @unique
+  date          DateTime
   revenue       Decimal  @db.Decimal(14, 2)
   customerCount Int      @default(0)
+  empresa       String?
+  departamento  String?
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
 
   @@index([date])
+  @@index([empresa])
+  @@index([departamento])
+  @@unique([date, empresa, departamento])
 }
 
 model Widget {

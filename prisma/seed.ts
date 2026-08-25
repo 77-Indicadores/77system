@@ -132,15 +132,25 @@ async function main() {
   });
 
   const months = [
-    { date: new Date("2026-04-01T00:00:00.000Z"), revenue: "184320.50", customerCount: 1048 },
-    { date: new Date("2026-05-01T00:00:00.000Z"), revenue: "203870.25", customerCount: 1132 },
-    { date: new Date("2026-06-01T00:00:00.000Z"), revenue: "221410.00", customerCount: 1233 },
-    { date: new Date("2026-07-01T00:00:00.000Z"), revenue: "248930.00", customerCount: 1284 }
+    { date: new Date("2026-04-01T00:00:00.000Z"), revenue: "94210.50", customerCount: 518, empresa: "77 Holding", departamento: "Comercial" },
+    { date: new Date("2026-04-01T00:00:00.000Z"), revenue: "90110.00", customerCount: 530, empresa: "77 Holding", departamento: "Operacoes" },
+    { date: new Date("2026-05-01T00:00:00.000Z"), revenue: "104870.25", customerCount: 552, empresa: "77 Holding", departamento: "Comercial" },
+    { date: new Date("2026-05-01T00:00:00.000Z"), revenue: "99000.00", customerCount: 580, empresa: "77 Holding", departamento: "Operacoes" },
+    { date: new Date("2026-06-01T00:00:00.000Z"), revenue: "113410.00", customerCount: 610, empresa: "77 North", departamento: "Comercial" },
+    { date: new Date("2026-06-01T00:00:00.000Z"), revenue: "108000.00", customerCount: 623, empresa: "77 North", departamento: "Operacoes" },
+    { date: new Date("2026-07-01T00:00:00.000Z"), revenue: "128930.00", customerCount: 644, empresa: "77 North", departamento: "Comercial" },
+    { date: new Date("2026-07-01T00:00:00.000Z"), revenue: "120000.00", customerCount: 640, empresa: "77 North", departamento: "Operacoes" }
   ];
 
   for (const month of months) {
     await prisma.financialRevenueMetric.upsert({
-      where: { date: month.date },
+      where: {
+        date_empresa_departamento: {
+          date: month.date,
+          empresa: month.empresa,
+          departamento: month.departamento,
+        },
+      },
       update: { revenue: month.revenue, customerCount: month.customerCount },
       create: month
     });

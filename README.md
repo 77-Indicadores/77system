@@ -52,10 +52,16 @@ Este projeto nasce para substituir entregas baseadas em Power BI por aplicacoes 
 
 - Next.js
 - TypeScript
-- PostgreSQL
+- PostgreSQL externo como padrao de producao
 - Docker Compose
 - Worker para jobs
 - Servico Python opcional para Catworld e processamento pesado
+
+## Bootstrap
+
+- Copie `.env.example` para `.env` e preencha `DATABASE_URL`.
+- O `docker-compose.yml` principal sobe apenas `app` e `catworld-service`.
+- Para desenvolvimento com Postgres local, use `docker compose -f docker-compose.dev.yml up`.
 
 ## Regra De Ouro
 

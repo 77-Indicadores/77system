@@ -27,6 +27,15 @@ describe("Docker app startup", () => {
     expect(composeFile).toContain("target: prod");
   });
 
+  it("uses external Postgres in the main compose file", () => {
+    const composeFile = readRootFile("docker-compose.yml");
+
+    expect(composeFile).toContain("DATABASE_URL: ${DATABASE_URL:?DATABASE_URL obrigatoria}");
+    expect(composeFile).not.toContain("services:\r\n  postgres:");
+    expect(composeFile).not.toContain("services:\n  postgres:");
+    expect(composeFile).not.toContain("context: ./services/postgres");
+  });
+
   it("does not mount the source tree over the production image", () => {
     const composeFile = readRootFile("docker-compose.yml");
 
@@ -41,11 +50,9 @@ describe("Docker app startup", () => {
     expect(nextConfig).not.toContain("import type");
   });
 
-  it("repairs the postgres role login capability on persisted clusters", () => {
-    const composeFile = readRootFile("docker-compose.yml");
+  it("keeps the optional postgres repair image available for dev-only compose variants", () => {
     const entrypoint = readRootFile("services/postgres/docker-entrypoint-repair.sh");
 
-    expect(composeFile).toContain("context: ./services/postgres");
     expect(entrypoint).toContain("ALTER ROLE postgres WITH LOGIN PASSWORD");
     expect(entrypoint).toContain("postgres --single -D \"${PGDATA:-/var/lib/postgresql/data}\" postgres");
   });

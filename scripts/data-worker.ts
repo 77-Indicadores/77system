@@ -107,7 +107,13 @@ async function runNextJob() {
       });
 
       await prisma.financialRevenueMetric.upsert({
-        where: { date: nextDate },
+        where: {
+          date_empresa_departamento: {
+            date: nextDate,
+            empresa: current?.empresa ?? "77 Holding",
+            departamento: current?.departamento ?? "Comercial",
+          },
+        },
         update: {
           revenue: (baseRevenue * 1.04).toFixed(2),
           customerCount: (current?.customerCount ?? 1200) + 37,
@@ -116,6 +122,8 @@ async function runNextJob() {
           date: nextDate,
           revenue: (baseRevenue * 1.04).toFixed(2),
           customerCount: (current?.customerCount ?? 1200) + 37,
+          empresa: current?.empresa ?? "77 Holding",
+          departamento: current?.departamento ?? "Comercial",
         },
       });
     }

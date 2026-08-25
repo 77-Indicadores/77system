@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getUserPermissionSet } from "@/domains/rbac/service";
 
 /**
  * Data segregation (row-level security).
@@ -45,6 +46,14 @@ export async function getCurrentUserScopeMap(): Promise<ScopeMap> {
   });
   if (!user) return {};
   return getUserScopeMap(user.id);
+}
+
+export async function shouldBypassDataScope(): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.email) return false;
+
+  const permissions = await getUserPermissionSet(session.user.email);
+  return permissions.has("super77.access") || permissions.has("system.settings.manage");
 }
 
 /**

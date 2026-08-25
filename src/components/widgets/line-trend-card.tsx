@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export type TrendPoint = {
   id: string;
@@ -81,26 +81,19 @@ export function LineTrendCard(props: Props) {
     return viewH - paddingBottom - ((value - min) / range) * plotH;
   }
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      const svgEl = svgRef.current;
-      if (!svgEl || xLabels.length === 0) return;
-      const rect = svgEl.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * svgWidth;
-      const total = xLabels.length;
-      const idx = Math.max(
-        0,
-        Math.min(Math.round(((mouseX - paddingX) / plotW) * (total - 1)), total - 1)
-      );
-      // Convert SVG coords to rendered pixel coords (for tooltip positioning)
-      const svgX = cx(idx, total);
-      const minY = Math.min(...series.map((s) => cy(s.points[idx]?.value ?? min)));
-      const screenX = (svgX / svgWidth) * rect.width;
-      const screenY = (minY / viewH) * rect.height;
-      setTooltip({ idx, screenX, screenY });
-    },
-    [svgWidth, xLabels.length, plotW, paddingX, series, min]
-  );
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    const svgEl = svgRef.current;
+    if (!svgEl || xLabels.length === 0) return;
+    const rect = svgEl.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * svgWidth;
+    const total = xLabels.length;
+    const idx = Math.max(0, Math.min(Math.round(((mouseX - paddingX) / plotW) * (total - 1)), total - 1));
+    const svgX = cx(idx, total);
+    const minY = Math.min(...series.map((s) => cy(s.points[idx]?.value ?? min)));
+    const screenX = (svgX / svgWidth) * rect.width;
+    const screenY = (minY / viewH) * rect.height;
+    setTooltip({ idx, screenX, screenY });
+  }
 
   const chart = (
     <div ref={containerRef} className="relative w-full">

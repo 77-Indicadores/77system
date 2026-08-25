@@ -1,44 +1,30 @@
 services:
-  postgres:
-    build:
-      context: ./services/postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: 77system
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "psql -U postgres -d 77system -v ON_ERROR_STOP=1 -v password=\"$$POSTGRES_PASSWORD\" -c \"ALTER USER postgres WITH PASSWORD :'password';\" && pg_isready -U postgres -d 77system"
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   app:
     build:
       context: .
       target: prod
     working_dir: /app
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/77system?schema=public&connection_limit=5&pool_timeout=20}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL obrigatoria}
       AUTH_SECRET: ${AUTH_SECRET:-replace-me-with-a-random-secret}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       AUTH_URL: ${AUTH_URL:-http://localhost:3001}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3001}
       CATWORLD_SERVICE_URL: ${CATWORLD_SERVICE_URL:-http://catworld-service:8001}
+      CATWORLD_BASE_URL: ${CATWORLD_BASE_URL:-}
+      CATWORLD_TOKEN: ${CATWORLD_TOKEN:-}
       SUPER77_EMAIL: ${SUPER77_EMAIL:-super77@77.local}
       SUPER77_PASSWORD: ${SUPER77_PASSWORD:-super77-dev-password}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
       - "${APP_PORT:-3001}:3000"
     depends_on:
-      postgres:
-        condition: service_healthy
       catworld-service:
         condition: service_started
 
@@ -49,6 +35,3 @@ services:
       CATWORLD_TIMEOUT: "30"
     ports:
       - "${CATWORLD_SERVICE_PORT:-8001}:8001"
-
-volumes:
-  postgres-data:

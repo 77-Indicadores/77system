@@ -30,7 +30,7 @@ export function HorizontalBars({
   filterDimension?: string;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
-  const { setFilter, getActive, hasAnyFilter } = useDashboardFilter();
+  const { setFilter, getActive } = useDashboardFilter();
 
   const activeValue = filterDimension ? getActive(filterDimension) : null;
   const hasLocalFilter = filterDimension !== undefined && activeValue !== null;
