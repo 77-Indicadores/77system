@@ -26,6 +26,7 @@ Read the docs that match the requested change:
 - `docs/08-contratos-de-dados.md`
 - `docs/09-padroes-para-ia.md`
 - `docs/12-staging-cron.md`
+- `docs/14-filtros-client-side.md`
 
 ## Architecture Rules
 
@@ -91,6 +92,17 @@ External source -> staging table -> validation -> materialized table -> dashboar
 ```
 
 Use SSE only for job progress/status, not for heavy analytical payloads.
+
+### Dashboard Filters
+
+Separate filters into two groups:
+
+- **Period / comparison** → URL (`searchParams`) — requires server re-render to load different data.
+- **Dimensions** (brand, seller, channel, curve…) → `useState` + `useMemo` — instant, zero round-trip.
+
+Server loads ALL rows for the period (grain). Client filters via `useMemo`. See `docs/14-filtros-client-side.md` and `src/components/widgets/grain-filter-example.tsx` for the reference implementation.
+
+Every `fato_*` table must have `@@index([dataFaturamento])` (or the equivalent date column). Without it, period-range queries do a full table scan and take 10–30 s even on materialized tables.
 
 ## Commands
 
