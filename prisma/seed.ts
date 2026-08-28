@@ -34,14 +34,28 @@ async function main() {
       create: { key, name: key, description: role.description }
     });
 
+    const permissionIds: string[] = [];
     for (const permissionKey of role.permissions) {
       const permission = await prisma.permission.findUniqueOrThrow({ where: { key: permissionKey } });
+      permissionIds.push(permission.id);
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: savedRole.id, permissionId: permission.id } },
         update: {},
         create: { roleId: savedRole.id, permissionId: permission.id }
       });
     }
+
+    /*
+     * O contrato e' a fonte da verdade: permissao retirada do YAML tem de sair do banco.
+     * O seed so' inseria, e por isso um banco ja semeado ficava com o que o contrato ja
+     * nao concede mais. Isso importa para a alcada de acesso: o `operador` nao recebe mais
+     * as permissoes amplas de indicadores e cadastros, e se elas sobrevivessem aqui todo
+     * operador continuaria vendo tudo -- a concessao por usuario nao restringiria nada, e
+     * nenhum erro apareceria.
+     */
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: savedRole.id, permissionId: { notIn: permissionIds } }
+    });
   }
 
   const passwordHash = await bcrypt.hash(process.env.SUPER77_PASSWORD ?? "super77-dev-password", 12);

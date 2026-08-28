@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   Check,
   CircleDot,
+  Database,
+  Key,
+  LayoutGrid,
   Loader2,
   Mail,
   Pencil,
@@ -17,14 +20,18 @@ import {
   X,
 } from "lucide-react";
 import {
+  actionClearScope,
   actionCreateUser,
   actionDeleteUser,
   actionSendResetLink,
+  actionSetPolicies,
   actionSetRole,
+  actionSetScope,
   actionToggleStatus,
   actionUpdateUser,
 } from "./actions";
 import type { UserRow } from "@/domains/users/service";
+import type { GrupoCatalogo, PoliticaUsuario } from "@/domains/rbac/policies";
 
 const ROLES = [
   {
@@ -35,11 +42,16 @@ const ROLES = [
   {
     key: "operador",
     label: "Operador",
-    description: "Acesso ao sistema conforme permissões liberadas.",
+    description: "Enxerga apenas os grupos, telas e cadastros concedidos abaixo.",
   },
 ] as const;
 
 type RoleKey = "super77" | "operador";
+
+export type Catalogo = {
+  grupos: GrupoCatalogo[];
+  cadastros: { chave: string; nome: string }[];
+};
 
 function initials(user: UserRow) {
   const src = user.name ?? user.email;
@@ -55,6 +67,22 @@ function initials(user: UserRow) {
 function userRoleKey(user: UserRow): RoleKey | null {
   const key = user.roles[0]?.role.key;
   return key === "super77" || key === "operador" ? key : null;
+}
+
+function parseValues(raw: string): string[] {
+  return raw.split(/[\n,]/).map((v) => v.trim()).filter(Boolean);
+}
+
+function groupScopes(user: UserRow): Record<string, string[]> {
+  return user.scopes.reduce<Record<string, string[]>>((m, s) => {
+    (m[s.dimension] ??= []).push(s.value);
+    return m;
+  }, {});
+}
+
+/** Marca ou desmarca um item numa das listas da política. */
+function alternar(lista: string[], item: string): string[] {
+  return lista.includes(item) ? lista.filter((x) => x !== item) : [...lista, item];
 }
 
 function RoleBadge({ roleKey }: { roleKey: RoleKey | null }) {
@@ -90,30 +118,64 @@ function StatusDot({ status }: { status: "ACTIVE" | "DISABLED" }) {
   );
 }
 
+/** Uma linha marcável da alçada. */
+function ItemAlcada({
+  label,
+  marcado,
+  onToggle,
+  className = "",
+}: {
+  label: string;
+  marcado: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-[12px] transition-colors hover:bg-muted/60 ${className}`}>
+      <input type="checkbox" className="size-3.5 accent-[--primary]" checked={marcado} onChange={onToggle} />
+      <span className={marcado ? "font-semibold text-card-foreground" : "text-muted-foreground"}>{label}</span>
+    </label>
+  );
+}
+
 export function UsersClient({
   users,
   currentUserEmail,
+  catalogo,
+  politicas,
 }: {
   users: UserRow[];
   currentUserEmail: string;
+  catalogo: Catalogo;
+  politicas: Record<string, PoliticaUsuario>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [panel, setPanel] = useState<"create" | { edit: UserRow } | null>(null);
 
+  // Criação
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
   const [cPass, setCPass] = useState("");
   const [cRole, setCRole] = useState<RoleKey>("operador");
+  const [cConvidar, setCConvidar] = useState(true);
   const [cError, setCError] = useState("");
+  const [cAviso, setCAviso] = useState("");
 
+  // Edição
   const [eName, setEName] = useState("");
   const [eEmail, setEEmail] = useState("");
   const [eRole, setERole] = useState<RoleKey>("operador");
   const [ePendingRole, setEPendingRole] = useState<RoleKey | null>(null);
+  const [eScopeDim, setEScopeDim] = useState("");
+  const [eScopeVals, setEScopeVals] = useState("");
+  // Alçada em estado local: o painel marca vários antes de gravar de uma vez.
+  const [ePol, setEPol] = useState<PoliticaUsuario>({ grupos: [], telas: [], cadastros: [] });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [eError, setEError] = useState("");
   const [eSuccess, setESuccess] = useState("");
+  // Link de convite ou de reset devolvido pelo servidor quando o e-mail não sai.
+  const [link, setLink] = useState("");
 
   useEffect(() => {
     if (panel && typeof panel === "object" && "edit" in panel) {
@@ -131,7 +193,10 @@ export function UsersClient({
     setCEmail("");
     setCPass("");
     setCRole("operador");
+    setCConvidar(true);
     setCError("");
+    setCAviso("");
+    setLink("");
     setPanel("create");
   }
 
@@ -140,9 +205,18 @@ export function UsersClient({
     setEEmail(user.email);
     setERole(userRoleKey(user) ?? "operador");
     setEPendingRole(null);
+    const atual = politicas[user.id];
+    setEPol({
+      grupos: atual?.grupos ?? [],
+      telas: atual?.telas ?? [],
+      cadastros: atual?.cadastros ?? [],
+    });
+    setEScopeDim("");
+    setEScopeVals("");
     setConfirmDelete(false);
     setEError("");
     setESuccess("");
+    setLink("");
     setPanel({ edit: user });
   }
 
@@ -150,7 +224,16 @@ export function UsersClient({
     setPanel(null);
   }
 
-  function run(fn: () => Promise<void>, onDone?: () => void) {
+  /**
+   * `onError` existe porque os dois painéis têm campo de erro próprio: o de edição lê
+   * eError, o de criação lê cError. Sem isso a falha ao criar sumia — era escrita no
+   * eError, que não está na tela naquele momento.
+   */
+  function run(
+    fn: () => Promise<void>,
+    onDone?: () => void,
+    onError: (msg: string) => void = setEError,
+  ) {
     setEError("");
     setESuccess("");
     startTransition(async () => {
@@ -159,7 +242,9 @@ export function UsersClient({
         router.refresh();
         onDone?.();
       } catch (err) {
-        setEError(err instanceof Error ? err.message : "Erro inesperado.");
+        const msg = err instanceof Error ? err.message : "Erro inesperado.";
+        onError(msg);
+        console.error("[users]", err);
       }
     });
   }
@@ -179,6 +264,9 @@ export function UsersClient({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const totalConcedido = (p: PoliticaUsuario | undefined) =>
+    (p?.grupos.length ?? 0) + (p?.telas.length ?? 0) + (p?.cadastros.length ?? 0);
+
   return (
     <>
       <div className="space-y-5">
@@ -186,7 +274,9 @@ export function UsersClient({
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Administração</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight">Usuários</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Papéis, status e operações de segurança do acesso.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Papéis, alçada de acesso por tela e segregação de dados por dimensão.
+            </p>
           </div>
           <button
             onClick={openCreate}
@@ -225,43 +315,63 @@ export function UsersClient({
                   <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Usuário</th>
                   <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Papel</th>
                   <th scope="col" className="px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Status</th>
+                  <th scope="col" className="hidden px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground md:table-cell">Alçada</th>
                   <th scope="col" className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b last:border-0 hover:bg-muted/20">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-black text-primary">
-                          {initials(user)}
+                {users.map((user) => {
+                  const roleKey = userRoleKey(user);
+                  const concedido = totalConcedido(politicas[user.id]);
+                  const scopeDims = Object.keys(groupScopes(user));
+                  return (
+                    <tr key={user.id} className="border-b last:border-0 hover:bg-muted/20">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-black text-primary">
+                            {initials(user)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-card-foreground">
+                              {user.name ?? "—"}
+                              {isSelf(user) && <span className="ml-1.5 text-[10px] font-bold text-muted-foreground">(você)</span>}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">{user.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-card-foreground">
-                            {user.name ?? "—"}
-                            {isSelf(user) && <span className="ml-1.5 text-[10px] font-bold text-muted-foreground">(você)</span>}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <RoleBadge roleKey={userRoleKey(user)} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <StatusDot status={user.status} />
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => openEdit(user)}
-                        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-muted"
-                      >
-                        <Pencil className="size-3" />
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-3">
+                        <RoleBadge roleKey={roleKey} />
+                      </td>
+                      <td className="px-5 py-3">
+                        <StatusDot status={user.status} />
+                      </td>
+                      <td className="hidden px-5 py-3 md:table-cell">
+                        {roleKey === "super77" ? (
+                          <span className="text-[11px] font-semibold text-muted-foreground">Tudo</span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            {concedido === 0 ? (
+                              <span className="font-semibold text-amber-600 dark:text-amber-400">Nada concedido</span>
+                            ) : (
+                              `${concedido} ${concedido === 1 ? "item" : "itens"}`
+                            )}
+                            {scopeDims.length > 0 && ` · ${scopeDims.length} dim.`}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => openEdit(user)}
+                          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-muted"
+                        >
+                          <Pencil className="size-3" />
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -275,7 +385,7 @@ export function UsersClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-dialog-title"
-          className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-6 shadow-xl"
+          className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border bg-card p-6 shadow-xl"
         >
           <div className="mb-5 flex items-center justify-between">
             <h2 id="create-dialog-title" className="text-lg font-black">Novo usuário</h2>
@@ -304,16 +414,34 @@ export function UsersClient({
                 placeholder="email@empresa.com"
               />
             </label>
-            <label className="block text-[13px] font-semibold">
-              Senha inicial <span className="font-normal text-muted-foreground">(mín. 8 caracteres)</span>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
               <input
-                className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
-                type="password"
-                value={cPass}
-                onChange={(e) => setCPass(e.target.value)}
-                placeholder="••••••••"
+                type="checkbox"
+                className="mt-0.5 size-4 accent-[--primary]"
+                checked={cConvidar}
+                onChange={(e) => setCConvidar(e.target.checked)}
               />
+              <div>
+                <p className="text-[12px] font-bold">Enviar convite por e-mail</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  A pessoa define a própria senha por um link válido por 24 horas. Ninguém mais fica sabendo a senha dela.
+                </p>
+              </div>
             </label>
+
+            {!cConvidar && (
+              <label className="block text-[13px] font-semibold">
+                Senha inicial <span className="font-normal text-muted-foreground">(mín. 8 caracteres)</span>
+                <input
+                  className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  type="password"
+                  value={cPass}
+                  onChange={(e) => setCPass(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </label>
+            )}
 
             <fieldset>
               <legend className="text-[13px] font-semibold">Papel</legend>
@@ -336,20 +464,68 @@ export function UsersClient({
                   </label>
                 ))}
               </div>
+              {cRole === "operador" && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  O operador nasce sem enxergar nada. Depois de criar, abra o usuário e conceda os grupos, telas e cadastros.
+                </p>
+              )}
             </fieldset>
 
             {cError && <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] text-destructive">{cError}</p>}
+            {cAviso && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                <p className="text-[12px] font-semibold text-primary">{cAviso}</p>
+                {link && <p className="mt-1 break-all font-mono text-[11px] text-muted-foreground">{link}</p>}
+              </div>
+            )}
 
             <button
               disabled={isPending}
               onClick={() => {
                 setCError("");
-                run(() => actionCreateUser({ name: cName, email: cEmail, password: cPass, roleKey: cRole }), closePanel);
+                setCAviso("");
+                setLink("");
+                startTransition(async () => {
+                  try {
+                    const r = await actionCreateUser({
+                      name: cName,
+                      email: cEmail,
+                      password: cPass,
+                      roleKey: cRole,
+                      convidar: cConvidar,
+                    });
+                    if (r.erro) {
+                      setCError(r.erro);
+                      return;
+                    }
+                    router.refresh();
+                    /*
+                     * Só fecha quando não há nada a dizer — o caminho da senha inicial.
+                     * No convite o painel fica aberto: ou confirma o envio, ou entrega o
+                     * link que o administrador precisa copiar. Fechar sozinho apagaria o
+                     * único lugar onde esse link aparece.
+                     */
+                    if (!r.aviso) {
+                      closePanel();
+                      return;
+                    }
+                    setCAviso(r.aviso);
+                    setLink(r.convite ?? "");
+                    // Limpa o formulário: o usuário já existe, e reenviar criaria o erro
+                    // de e-mail repetido.
+                    setCName("");
+                    setCEmail("");
+                    setCPass("");
+                  } catch (err) {
+                    setCError(err instanceof Error ? err.message : "Erro inesperado.");
+                    console.error("[users]", err);
+                  }
+                });
               }}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
-              Criar usuário
+              {cConvidar ? "Criar e convidar" : "Criar usuário"}
             </button>
           </div>
         </div>
@@ -360,7 +536,7 @@ export function UsersClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-dialog-title"
-          className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[480px] flex-col border-l bg-card shadow-2xl"
+          className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[520px] flex-col border-l bg-card shadow-2xl"
         >
           <div className="flex items-center justify-between border-b px-6 py-4">
             <div className="flex items-center gap-3">
@@ -463,20 +639,202 @@ export function UsersClient({
                 )}
               </section>
 
+              {/* ── Alçada de acesso ─────────────────────────────────────────── */}
+              <section className="px-6 py-5">
+                <h3 className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Alçada de acesso
+                </h3>
+                {eRole === "super77" ? (
+                  <p className="text-[12px] text-muted-foreground">
+                    O papel Super77 enxerga todos os grupos, telas e cadastros. A concessão item a item vale para o
+                    papel Operador.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mb-3 text-[11px] text-muted-foreground">
+                      Marcar o grupo libera o bloco inteiro. Marcar telas soltas libera apenas elas.
+                    </p>
+
+                    <div className="space-y-3">
+                      {catalogo.grupos.length === 0 && (
+                        <p className="rounded-md border border-dashed px-3 py-4 text-center text-[12px] text-muted-foreground">
+                          Nenhum grupo de indicadores ativo. Rode o seed para criá-los.
+                        </p>
+                      )}
+                      {catalogo.grupos.map((g) => {
+                        const grupoMarcado = ePol.grupos.includes(g.slug);
+                        return (
+                          <div key={g.slug} className="rounded-lg border">
+                            <div className="border-b bg-muted/30 px-2 py-1.5">
+                              <ItemAlcada
+                                label={g.name}
+                                marcado={grupoMarcado}
+                                onToggle={() => setEPol((p) => ({ ...p, grupos: alternar(p.grupos, g.slug) }))}
+                                className="font-semibold"
+                              />
+                            </div>
+                            <div className="px-2 py-1">
+                              {g.screens.length === 0 ? (
+                                <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Sem telas ativas.</p>
+                              ) : (
+                                g.screens.map((t) => (
+                                  <ItemAlcada
+                                    key={t.slug}
+                                    label={t.name}
+                                    marcado={grupoMarcado || ePol.telas.includes(t.slug)}
+                                    onToggle={() => setEPol((p) => ({ ...p, telas: alternar(p.telas, t.slug) }))}
+                                    className={grupoMarcado ? "pl-6 opacity-60" : "pl-6"}
+                                  />
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <div className="rounded-lg border">
+                        <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
+                          <Database className="size-3.5 text-muted-foreground" />
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Cadastros</span>
+                        </div>
+                        <div className="px-2 py-1">
+                          {catalogo.cadastros.length === 0 ? (
+                            <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Nenhum cadastro ativo.</p>
+                          ) : (
+                            catalogo.cadastros.map((c) => (
+                              <ItemAlcada
+                                key={c.chave}
+                                label={c.nome}
+                                marcado={ePol.cadastros.includes(c.chave)}
+                                onToggle={() => setEPol((p) => ({ ...p, cadastros: alternar(p.cadastros, c.chave) }))}
+                              />
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      disabled={isPending}
+                      onClick={() =>
+                        run(
+                          () => actionSetPolicies(editUser.id, ePol),
+                          () => setESuccess("Alçada de acesso salva."),
+                        )
+                      }
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-muted disabled:opacity-40"
+                    >
+                      {isPending ? <Loader2 className="size-3 animate-spin" /> : <LayoutGrid className="size-3" />}
+                      Salvar alçada
+                    </button>
+                  </>
+                )}
+              </section>
+
+              {/* ── Segregação de dados ──────────────────────────────────────── */}
+              <section className="px-6 py-5">
+                <h3 className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Segregação de dados
+                </h3>
+                <p className="mb-3 text-[11px] text-muted-foreground">
+                  Sem restrição numa dimensão, o usuário vê todas as linhas dela. Com restrição, vê só os valores
+                  listados.
+                </p>
+
+                {editUser.scopes.length === 0 ? (
+                  <p className="rounded-md border border-dashed px-3 py-3 text-center text-[12px] text-muted-foreground">
+                    Sem restrição — enxerga todas as linhas.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(groupScopes(editUser)).map(([dim, vals]) => (
+                      <div key={dim} className="rounded-md border px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[12px] font-bold">{dim}</p>
+                          <button
+                            disabled={isPending}
+                            onClick={() => run(() => actionClearScope(editUser.id, dim), () => setESuccess(`Restrição de ${dim} removida.`))}
+                            className="text-[11px] font-semibold text-destructive hover:underline disabled:opacity-40"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">{vals.join(", ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-3 space-y-2">
+                  <input
+                    className="h-9 w-full rounded-md border bg-background px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    value={eScopeDim}
+                    onChange={(e) => setEScopeDim(e.target.value)}
+                    placeholder="Dimensão (ex: empresa, filial, obra)"
+                  />
+                  <textarea
+                    className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    value={eScopeVals}
+                    onChange={(e) => setEScopeVals(e.target.value)}
+                    placeholder="Valores permitidos, separados por vírgula ou quebra de linha"
+                  />
+                  <button
+                    disabled={isPending || !eScopeDim.trim() || parseValues(eScopeVals).length === 0}
+                    onClick={() =>
+                      run(
+                        () => actionSetScope(editUser.id, eScopeDim.trim(), parseValues(eScopeVals)),
+                        () => {
+                          setEScopeDim("");
+                          setEScopeVals("");
+                          setESuccess("Restrição salva.");
+                        },
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-muted disabled:opacity-40"
+                  >
+                    {isPending ? <Loader2 className="size-3 animate-spin" /> : <Key className="size-3" />}
+                    Aplicar restrição
+                  </button>
+                </div>
+              </section>
+
               <section className="px-6 py-5">
                 <h3 className="mb-3 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Segurança</h3>
                 <div className="space-y-2">
                   <button
                     disabled={isPending || editUser.status === "DISABLED"}
-                    onClick={() => run(() => actionSendResetLink(editUser.email), () => setESuccess("Link de reset gerado e enviado."))}
+                    onClick={() =>
+                      startTransition(async () => {
+                        setEError("");
+                        setESuccess("");
+                        setLink("");
+                        const r = await actionSendResetLink(editUser.email);
+                        if (r.erro && !r.link) {
+                          setEError(r.erro);
+                          return;
+                        }
+                        setLink(r.link);
+                        setESuccess(
+                          r.enviado
+                            ? `Link enviado para ${editUser.email}.`
+                            : `O e-mail não saiu (${r.erro}). Entregue o link abaixo.`,
+                        );
+                      })
+                    }
                     className="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-[13px] transition-colors hover:bg-muted disabled:opacity-40"
                   >
                     <Mail className="size-4 shrink-0 text-muted-foreground" />
                     <div>
-                      <p className="font-semibold">Gerar link de reset de senha</p>
-                      <p className="text-[11px] text-muted-foreground">Expira em 1 hora. Enviado para {editUser.email}.</p>
+                      <p className="font-semibold">Gerar link de definição de senha</p>
+                      <p className="text-[11px] text-muted-foreground">Vale por 24 horas. Enviado para {editUser.email}.</p>
                     </div>
                   </button>
+
+                  {link && (
+                    <p className="break-all rounded-md border bg-muted/40 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                      {link}
+                    </p>
+                  )}
 
                   {!isSelf(editUser) && (
                     <button

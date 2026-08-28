@@ -5,9 +5,13 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createRegistryRecord, getRegistry, parseRegistrySchema, type RegistryField } from "@/domains/registries/service";
+import { podeVerCadastro } from "@/domains/registries/acesso";
 
 export default async function RegistryDetailPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
+  // Cadastro fora da alcada nao existe para quem entra pela URL: mesma resposta de um
+  // cadastro inexistente, para nao revelar que ele existe.
+  if (!(await podeVerCadastro(key))) notFound();
   const registry = await getRegistry(key);
   if (!registry) notFound();
 

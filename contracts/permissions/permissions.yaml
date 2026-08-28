@@ -21,12 +21,15 @@ roles:
       - exports.excel.create
       - exports.pdf.create
 
+  # O operador NAO recebe as permissoes amplas de indicadores e cadastros.
+  # Quem define o que ele enxerga e' a alcada de acesso, concedida usuario a usuario na
+  # tela de Usuarios e gravada em ResourcePolicy (src/domains/rbac/policies.ts).
+  # Conceder `indicators.group.view` / `indicators.dashboard.view` /
+  # `registries.module.view` aqui liberaria TUDO para todo operador e tornaria a alcada
+  # decorativa.
   operador:
-    description: Operador do sistema com acesso configuravel a indicadores e cadastros.
+    description: Operador do sistema. Enxerga apenas os grupos, telas e cadastros concedidos na alcada de acesso.
     permissions:
-      - indicators.group.view
-      - indicators.dashboard.view
-      - registries.module.view
       - registries.record.view
       - exports.excel.create
 
