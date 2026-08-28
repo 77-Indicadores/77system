@@ -11,7 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const groupFindMany = vi.fn();
 const screenFindUnique = vi.fn();
+const screenFindMany = vi.fn();
 const registryFindMany = vi.fn();
+const policyFindMany = vi.fn();
+const policyDeleteMany = vi.fn();
 const auth = vi.fn();
 const getUserPermissionSet = vi.fn();
 const getUserResourcePolicies = vi.fn();
@@ -19,8 +22,9 @@ const getUserResourcePolicies = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     dashboardGroup: { findMany: groupFindMany },
-    dashboardScreen: { findUnique: screenFindUnique },
+    dashboardScreen: { findUnique: screenFindUnique, findMany: screenFindMany },
     registryDefinition: { findMany: registryFindMany },
+    resourcePolicy: { findMany: policyFindMany, deleteMany: policyDeleteMany },
   },
 }));
 
@@ -57,7 +61,10 @@ beforeEach(() => {
   vi.resetModules();
   groupFindMany.mockReset();
   screenFindUnique.mockReset();
+  screenFindMany.mockReset();
   registryFindMany.mockReset();
+  policyFindMany.mockReset();
+  policyDeleteMany.mockReset();
   auth.mockReset();
   getUserPermissionSet.mockReset();
   getUserResourcePolicies.mockReset();
@@ -292,5 +299,88 @@ describe("sessão ausente", () => {
 
     expect(await listVisibleDashboardGroups()).toEqual([]);
     expect(await cadastrosVisiveis()).toEqual([]);
+  });
+});
+
+describe("getPoliticasDeUsuarios", () => {
+  it("agrupa por usuário em uma consulta só", async () => {
+    policyFindMany.mockResolvedValue([
+      { userId: "u1", resourceType: "dashboard_group", resourceId: "financeiro" },
+      { userId: "u1", resourceType: "registry_module", resourceId: "vendedores" },
+      { userId: "u2", resourceType: "dashboard_screen", resourceId: "financeiro.dre" },
+    ]);
+
+    const { getPoliticasDeUsuarios } = await import("@/domains/rbac/policies");
+    const r = await getPoliticasDeUsuarios(["u1", "u2", "u3"]);
+
+    // Uma consulta para os três, e não uma por usuário.
+    expect(policyFindMany).toHaveBeenCalledTimes(1);
+    expect(r.u1).toEqual({ grupos: ["financeiro"], telas: [], cadastros: ["vendedores"] });
+    expect(r.u2).toEqual({ grupos: [], telas: ["financeiro.dre"], cadastros: [] });
+    // Quem não tem política aparece vazio, e não ausente: o painel lê direto pelo id.
+    expect(r.u3).toEqual({ grupos: [], telas: [], cadastros: [] });
+  });
+
+  it("não consulta nada com lista vazia", async () => {
+    const { getPoliticasDeUsuarios } = await import("@/domains/rbac/policies");
+    expect(await getPoliticasDeUsuarios([])).toEqual({});
+    expect(policyFindMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("limparPoliticasOrfas", () => {
+  beforeEach(() => {
+    groupFindMany.mockResolvedValue([{ slug: "financeiro" }]);
+    screenFindMany.mockResolvedValue([{ slug: "financeiro.dre" }]);
+    registryFindMany.mockResolvedValue([{ key: "vendedores" }]);
+    policyDeleteMany.mockResolvedValue({ count: 0 });
+  });
+
+  it("apaga só o que aponta para recurso inexistente", async () => {
+    const { limparPoliticasOrfas } = await import("@/domains/rbac/policies");
+    await limparPoliticasOrfas();
+
+    const chamadas = policyDeleteMany.mock.calls.map((c) => c[0].where);
+    expect(chamadas).toEqual([
+      { resourceType: "dashboard_group", resourceId: { notIn: ["financeiro"] } },
+      { resourceType: "dashboard_screen", resourceId: { notIn: ["financeiro.dre"] } },
+      { resourceType: "registry_module", resourceId: { notIn: ["vendedores"] } },
+    ]);
+  });
+
+  it("soma quantas removeu", async () => {
+    policyDeleteMany.mockResolvedValue({ count: 2 });
+
+    const { limparPoliticasOrfas } = await import("@/domains/rbac/policies");
+    expect(await limparPoliticasOrfas()).toBe(6);
+  });
+
+  it("não olha isActive: tela desativada não perde a concessão", async () => {
+    const { limparPoliticasOrfas } = await import("@/domains/rbac/policies");
+    await limparPoliticasOrfas();
+
+    /*
+     * Desativar uma tela por uma semana nao pode revogar em silencio a concessao de todo
+     * mundo. A limpeza pergunta se o recurso EXISTE, nunca se esta ativo.
+     */
+    for (const consulta of [groupFindMany, screenFindMany, registryFindMany]) {
+      expect(consulta.mock.calls[0]?.[0] ?? {}).not.toHaveProperty("where");
+    }
+  });
+
+  it("usa o cliente que recebe, para o seed não abrir um segundo pool", async () => {
+    const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    const cliente = {
+      dashboardGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      dashboardScreen: { findMany: vi.fn().mockResolvedValue([]) },
+      registryDefinition: { findMany: vi.fn().mockResolvedValue([]) },
+      resourcePolicy: { deleteMany },
+    };
+
+    const { limparPoliticasOrfas } = await import("@/domains/rbac/policies");
+    await limparPoliticasOrfas(cliente as never);
+
+    expect(deleteMany).toHaveBeenCalledTimes(3);
+    expect(policyDeleteMany).not.toHaveBeenCalled();
   });
 });

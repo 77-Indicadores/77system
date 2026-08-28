@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import { limparPoliticasOrfas } from "../src/domains/rbac/policies";
 
 const prisma = new PrismaClient();
 
@@ -205,6 +206,18 @@ async function main() {
       }
     }
   });
+
+  /*
+   * A alcada guarda slug, e slug nao tem chave estrangeira: apagar um grupo, uma tela ou
+   * um cadastro deixa a politica para tras. A leitura ja ignora, entao nada quebra --
+   * elas so' se acumulam, e reapareceriam se o slug fosse reaproveitado.
+   *
+   * Aqui, no fim do seed, e' o unico momento em que o catalogo definitivo ja esta no
+   * banco. Recurso apenas desativado nao e' apagado: desativar uma tela por uma semana
+   * nao pode revogar em silencio a concessao de todo mundo.
+   */
+  const orfas = await limparPoliticasOrfas(prisma);
+  if (orfas > 0) console.log(`Politicas de acesso orfas removidas: ${orfas}`);
 }
 
 main()

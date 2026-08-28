@@ -1,4 +1,10 @@
 import { prisma } from "@/lib/prisma";
+
+/** O suficiente do PrismaClient para a limpeza; o seed passa o cliente dele. */
+type ClientePrisma = Pick<
+  typeof prisma,
+  "dashboardGroup" | "dashboardScreen" | "registryDefinition" | "resourcePolicy"
+>;
 import { listarCadastrosConcediveis } from "@/domains/registries/acesso";
 import {
   PERMISSAO_CADASTRO,
@@ -81,6 +87,75 @@ export async function getPoliticasDoUsuario(userId: string): Promise<PoliticaUsu
     telas: doTipo(TIPO_TELA),
     cadastros: doTipo(TIPO_RECURSO),
   };
+}
+
+/**
+ * As políticas de vários usuários, em uma consulta só.
+ *
+ * A tela de Usuários chamava `getPoliticasDoUsuario` por usuário: trinta pessoas, trinta
+ * consultas, todas na renderização da página. Aqui é uma só, agrupada em memória.
+ */
+export async function getPoliticasDeUsuarios(
+  userIds: string[],
+): Promise<Record<string, PoliticaUsuario>> {
+  const vazia = (): PoliticaUsuario => ({ grupos: [], telas: [], cadastros: [] });
+  const porUsuario: Record<string, PoliticaUsuario> = Object.fromEntries(
+    userIds.map((id) => [id, vazia()]),
+  );
+  if (userIds.length === 0) return porUsuario;
+
+  const policies = await prisma.resourcePolicy.findMany({
+    where: { userId: { in: userIds } },
+    select: { userId: true, resourceType: true, resourceId: true },
+  });
+
+  for (const p of policies) {
+    // `userId` é opcional no schema (existe política por papel); o `in` acima já filtrou,
+    // mas o tipo continua anulável.
+    const alvo = p.userId ? porUsuario[p.userId] : undefined;
+    if (!alvo) continue;
+    if (p.resourceType === TIPO_GRUPO) alvo.grupos.push(p.resourceId);
+    else if (p.resourceType === TIPO_TELA) alvo.telas.push(p.resourceId);
+    else if (p.resourceType === TIPO_RECURSO) alvo.cadastros.push(p.resourceId);
+  }
+  return porUsuario;
+}
+
+/**
+ * Remove politicas que apontam para recurso que nao existe mais.
+ *
+ * `resourceId` guarda um slug, e slug nao tem chave estrangeira: apagar um grupo ou um
+ * cadastro deixa a politica para tras. A leitura ja ignora essas linhas, entao nada
+ * quebra -- elas so' se acumulam, e reaparecem se o slug for reaproveitado um dia.
+ *
+ * Recurso apenas DESATIVADO nao conta como inexistente: desativar uma tela por uma semana
+ * nao pode revogar em silencio a concessao de todo mundo.
+ *
+ * Aceita um cliente para o seed poder passar o dele: o seed roda fora do Next com o
+ * proprio PrismaClient, e usar o singleton daqui abriria um segundo pool que ninguem
+ * desconecta -- o processo do seed ficaria pendurado no fim.
+ */
+export async function limparPoliticasOrfas(client: ClientePrisma = prisma): Promise<number> {
+  const [grupos, telas, cadastros] = await Promise.all([
+    client.dashboardGroup.findMany({ select: { slug: true } }),
+    client.dashboardScreen.findMany({ select: { slug: true } }),
+    client.registryDefinition.findMany({ select: { key: true } }),
+  ]);
+
+  const existentes: Record<string, string[]> = {
+    [TIPO_GRUPO]: grupos.map((g) => g.slug),
+    [TIPO_TELA]: telas.map((t) => t.slug),
+    [TIPO_RECURSO]: cadastros.map((c) => c.key),
+  };
+
+  let removidas = 0;
+  for (const [tipo, ids] of Object.entries(existentes)) {
+    const { count } = await client.resourcePolicy.deleteMany({
+      where: { resourceType: tipo, resourceId: { notIn: ids } },
+    });
+    removidas += count;
+  }
+  return removidas;
 }
 
 /**

@@ -149,6 +149,29 @@ PUT  /api/users/:id/policies  { grupos, telas, cadastros }      substitui o conj
 Requer permissão `users.manage`. O `PUT` é substituição completa: o que não vier na lista
 é revogado, em transação.
 
+### Concessão por papel: existe no schema, e não tem tela
+
+`ResourcePolicy.roleId` existe e `getUserResourcePolicies` já o lê — política concedida a
+um papel vale para todos os membros dele. Mas a tela de Usuários só grava por `userId`, de
+propósito.
+
+Com dois papéis (`super77` e `operador`), conceder ao papel `operador` é conceder a **todo**
+operador — exatamente o mesmo efeito de colocar a permissão ampla no contrato, que é o que
+esta arquitetura removeu. Uma tela para isso reabriria o buraco com um botão mais bonito.
+
+Se um projeto criar papéis intermediários de verdade (`financeiro`, `operacao`), aí a
+concessão por papel passa a fazer sentido: o caminho de leitura já suporta, falta só gravar.
+
+### Manutenção
+
+`limparPoliticasOrfas()` roda no fim do seed e apaga política que aponta para grupo, tela ou
+cadastro **inexistente**. Recurso apenas desativado não conta: desativar uma tela por uma
+semana não pode revogar em silêncio a concessão de todo mundo.
+
+Política de usuário excluído cai por cascade (`ResourcePolicy.userId → User`, migration
+`20260828120000_resource_policy_user_cascade`). Antes dessa migration, `userId` era texto
+solto, sem chave estrangeira: excluir um usuário deixava a alçada dele no banco para sempre.
+
 ### Escrita em cadastro
 
 Ver e gravar são coisas separadas, e as duas são exigidas:
