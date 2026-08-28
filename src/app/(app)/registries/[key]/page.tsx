@@ -5,7 +5,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createRegistryRecord, getRegistry, parseRegistrySchema, type RegistryField } from "@/domains/registries/service";
-import { podeVerCadastro } from "@/domains/registries/acesso";
+import { podeEditarCadastro, podeVerCadastro, requireEdicaoDeCadastro } from "@/domains/registries/acesso";
 
 export default async function RegistryDetailPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -16,9 +16,14 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
   if (!registry) notFound();
 
   const schema = parseRegistrySchema(registry.schemaJson);
+  const podeEditar = await podeEditarCadastro(key);
 
   async function create(formData: FormData) {
     "use server";
+    // A guarda vive DENTRO da action, e nao so' no `podeEditar` acima: server action e'
+    // endpoint publico, chamavel sem passar por esta pagina. Esconder o formulario
+    // arruma a tela, nao o acesso.
+    await requireEdicaoDeCadastro(key);
     const payload = Object.fromEntries(
       schema.fields.map((field) => [field.name, coerceFieldValue(field, formData.get(field.name))])
     );
@@ -49,17 +54,19 @@ export default async function RegistryDetailPage({ params }: { params: Promise<{
         </div>
       </section>
 
-      <section className="rounded-xl border bg-card p-5 ">
-        <h2 className="text-sm font-black">Novo registro</h2>
-        <form action={create} className="mt-4 grid gap-3 lg:grid-cols-4">
-          {schema.fields.map((field) => (
-            <FieldInput field={field} key={field.name} />
-          ))}
-          <Button className="h-10 self-end" type="submit">
-            <Plus className="mr-2 size-4" /> Adicionar
-          </Button>
-        </form>
-      </section>
+      {podeEditar && (
+        <section className="rounded-xl border bg-card p-5 ">
+          <h2 className="text-sm font-black">Novo registro</h2>
+          <form action={create} className="mt-4 grid gap-3 lg:grid-cols-4">
+            {schema.fields.map((field) => (
+              <FieldInput field={field} key={field.name} />
+            ))}
+            <Button className="h-10 self-end" type="submit">
+              <Plus className="mr-2 size-4" /> Adicionar
+            </Button>
+          </form>
+        </section>
+      )}
 
       <section className="overflow-hidden rounded-xl border bg-card ">
         <header className="border-b px-5 py-4">

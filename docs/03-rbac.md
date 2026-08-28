@@ -149,6 +149,22 @@ PUT  /api/users/:id/policies  { grupos, telas, cadastros }      substitui o conj
 Requer permissão `users.manage`. O `PUT` é substituição completa: o que não vier na lista
 é revogado, em transação.
 
+### Escrita em cadastro
+
+Ver e gravar são coisas separadas, e as duas são exigidas:
+
+| | quem decide |
+|---|---|
+| **qual** cadastro a pessoa alcança | a alçada (`ResourcePolicy`) |
+| se ela grava **em algum** | `registries.record.manage`, no papel |
+
+Por padrão o `operador` tem `registries.record.view` e **não** tem o `manage`: consulta o
+cadastro concedido sem alterá-lo. Para liberar a escrita, adicione `registries.record.manage`
+ao papel no contrato — vale para todos os cadastros que a alçada dele já mostra.
+
+A guarda vive **dentro da server action** (`requireEdicaoDeCadastro`), não só na página.
+Server action é endpoint público: esconder o formulário arruma a tela, não o acesso.
+
 ### Convite de acesso
 
 Usuário novo nasce com senha aleatória que ninguém conhece e recebe um link de definição

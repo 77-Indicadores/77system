@@ -1,7 +1,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissionSet, getUserResourcePolicies } from "@/domains/rbac/service";
-import { PERMISSAO_CADASTRO, TIPO_CADASTRO } from "@/domains/rbac/recursos";
+import {
+  PERMISSAO_CADASTRO,
+  PERMISSAO_REGISTRO_MANAGE,
+  TIPO_CADASTRO,
+} from "@/domains/rbac/recursos";
 
 /**
  * Quem enxerga cada cadastro.
@@ -20,7 +24,7 @@ import { PERMISSAO_CADASTRO, TIPO_CADASTRO } from "@/domains/rbac/recursos";
  */
 
 // Reexportados para quem já lia daqui; a definição vive em rbac/recursos.ts.
-export { PERMISSAO_CADASTRO };
+export { PERMISSAO_CADASTRO, PERMISSAO_REGISTRO_MANAGE };
 export const TIPO_RECURSO = TIPO_CADASTRO;
 
 export type CadastroConcedivel = {
@@ -74,4 +78,36 @@ export async function cadastrosVisiveis(): Promise<string[]> {
  */
 export async function podeVerCadastro(chave: string): Promise<boolean> {
   return (await cadastrosVisiveis()).includes(chave);
+}
+
+/**
+ * Pode gravar registro neste cadastro?
+ *
+ * Duas condicoes, e as duas importam. A alcada diz QUAL cadastro a pessoa alcanca; a
+ * permissao `registries.record.manage`, no papel, diz se ela escreve em algum. Quem so'
+ * consulta enxerga o cadastro concedido e nao mexe nele.
+ */
+export async function podeEditarCadastro(chave: string): Promise<boolean> {
+  const sessao = await auth();
+  if (!sessao?.user?.email) return false;
+
+  const [globais, visivel] = await Promise.all([
+    getUserPermissionSet(sessao.user.email),
+    podeVerCadastro(chave),
+  ]);
+  return visivel && globais.has(PERMISSAO_REGISTRO_MANAGE);
+}
+
+/**
+ * Barra a gravacao, para uso dentro de server action.
+ *
+ * Server action e' endpoint publico: `podeVerCadastro` na pagina protege a renderizacao,
+ * nao a chamada. Sem esta guarda, qualquer pessoa autenticada gravava registro em
+ * qualquer cadastro -- inclusive nos que a alcada dela nao mostra. Esconder o formulario
+ * nao e' protecao.
+ */
+export async function requireEdicaoDeCadastro(chave: string): Promise<void> {
+  if (!(await podeEditarCadastro(chave))) {
+    throw new Error("Sem permissao para gravar neste cadastro.");
+  }
 }

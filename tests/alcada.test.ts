@@ -34,6 +34,7 @@ vi.mock("@/domains/rbac/service", () => ({
 const PERM_GRUPO = "indicators.group.view";
 const PERM_TELA = "indicators.dashboard.view";
 const PERM_CADASTRO = "registries.module.view";
+const PERM_ESCRITA = "registries.record.manage";
 
 /** Um grupo com duas telas, que é o mínimo para distinguir "o bloco" de "uma tela". */
 const GRUPO_FINANCEIRO = {
@@ -219,6 +220,65 @@ describe("cadastros visíveis", () => {
 
     const { cadastrosVisiveis } = await import("@/domains/registries/acesso");
     expect(await cadastrosVisiveis()).toEqual([]);
+  });
+});
+
+describe("escrita em cadastro", () => {
+  beforeEach(() => {
+    registryFindMany.mockResolvedValue([
+      { key: "vendedores", name: "Vendedores" },
+      { key: "centros-custo", name: "Centros de custo" },
+    ]);
+  });
+
+  it("não deixa gravar quem só recebeu a alçada de leitura", async () => {
+    getUserResourcePolicies.mockResolvedValue([
+      policy("registry_module", "vendedores", PERM_CADASTRO),
+    ]);
+
+    const { podeEditarCadastro } = await import("@/domains/registries/acesso");
+    // Enxerga o cadastro, mas não tem registries.record.manage no papel.
+    expect(await podeEditarCadastro("vendedores")).toBe(false);
+  });
+
+  it("não deixa gravar em cadastro fora da alçada, mesmo com a permissão de escrita", async () => {
+    getUserPermissionSet.mockResolvedValue(new Set([PERM_ESCRITA]));
+    getUserResourcePolicies.mockResolvedValue([
+      policy("registry_module", "vendedores", PERM_CADASTRO),
+    ]);
+
+    const { podeEditarCadastro } = await import("@/domains/registries/acesso");
+    expect(await podeEditarCadastro("vendedores")).toBe(true);
+    // A permissao de escrita e' global; a alcada e' que diz em qual cadastro.
+    expect(await podeEditarCadastro("centros-custo")).toBe(false);
+  });
+
+  it("deixa gravar quem tem alçada e permissão de escrita", async () => {
+    getUserPermissionSet.mockResolvedValue(new Set([PERM_CADASTRO, PERM_ESCRITA]));
+
+    const { podeEditarCadastro } = await import("@/domains/registries/acesso");
+    expect(await podeEditarCadastro("centros-custo")).toBe(true);
+  });
+
+  it("a guarda da server action recusa em vez de deixar passar", async () => {
+    getUserResourcePolicies.mockResolvedValue([
+      policy("registry_module", "vendedores", PERM_CADASTRO),
+    ]);
+
+    const { requireEdicaoDeCadastro } = await import("@/domains/registries/acesso");
+    /*
+     * Server action e' endpoint publico: esconder o formulario nao impede a chamada.
+     * Sem esta guarda, qualquer autenticado gravava em qualquer cadastro.
+     */
+    await expect(requireEdicaoDeCadastro("vendedores")).rejects.toThrow(/Sem permissao/);
+  });
+
+  it("não deixa gravar sem sessão", async () => {
+    auth.mockResolvedValue(null);
+    getUserPermissionSet.mockResolvedValue(new Set([PERM_CADASTRO, PERM_ESCRITA]));
+
+    const { podeEditarCadastro } = await import("@/domains/registries/acesso");
+    expect(await podeEditarCadastro("vendedores")).toBe(false);
   });
 });
 

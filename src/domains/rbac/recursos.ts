@@ -12,6 +12,8 @@
 export const PERMISSAO_GRUPO = "indicators.group.view";
 export const PERMISSAO_TELA = "indicators.dashboard.view";
 export const PERMISSAO_CADASTRO = "registries.module.view";
+/** Escrever registro. Global no papel; a alcada decide EM QUAL cadastro. */
+export const PERMISSAO_REGISTRO_MANAGE = "registries.record.manage";
 
 export const TIPO_GRUPO = "dashboard_group";
 export const TIPO_TELA = "dashboard_screen";
