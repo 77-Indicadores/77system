@@ -36,6 +36,7 @@ Este projeto nasce para substituir entregas baseadas em Power BI por aplicacoes 
 - [Roadmap MVP](docs/10-roadmap-mvp.md)
 - [Staging, Materializacao E Cron](docs/12-staging-cron.md)
 - [Mapa De Melhorias](docs/13-mapa-melhorias.md)
+- [Módulo de Acessos](docs/15-acessos.md)
 
 ## Contratos
 

@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { recordAccessChange } from "@/domains/auth/access-activity";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -33,5 +34,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   pages: {
     signIn: "/login"
+  },
+  events: {
+    async signIn({ user }) {
+      if (user.email) await recordAccessChange(user.email, "LOGIN");
+    },
+    async signOut(message) {
+      if ("token" in message && typeof message.token?.email === "string") {
+        await recordAccessChange(message.token.email, "LOGOUT");
+      }
+    }
   }
 });

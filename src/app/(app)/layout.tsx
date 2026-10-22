@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { AppShell } from "@/components/app-shell";
+import { UserActivityHeartbeat } from "@/components/user-activity-heartbeat";
 import { getUserPermissionSet } from "@/domains/rbac/service";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,16 +24,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AppShell
-      canSuper77={permissions.has("super77.access")}
-      canManageUsers={permissions.has("users.manage")}
-      canIndicators={permissions.has("indicators.dashboard.view")}
-      canRegistries={permissions.has("registries.module.view")}
-      userName={displayName}
-      userInitials={initials}
-      onLogout={logout}
-    >
-      {children}
-    </AppShell>
+    <>
+      <UserActivityHeartbeat />
+      <AppShell
+        canSuper77={permissions.has("super77.access")}
+        canManageUsers={permissions.has("users.manage")}
+        canIndicators={permissions.has("indicators.dashboard.view")}
+        canRegistries={permissions.has("registries.module.view")}
+        userName={displayName}
+        userInitials={initials}
+        onLogout={logout}
+      >
+        {children}
+      </AppShell>
+    </>
   );
 }

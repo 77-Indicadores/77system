@@ -1,8 +1,14 @@
 import Link from "next/link";
-import { DatabaseZap, Plug } from "lucide-react";
+import { DatabaseZap, Plug, Users } from "lucide-react";
 import { requirePermission } from "@/domains/rbac/guards";
 
 const cards = [
+  {
+    href: "/super77/acessos",
+    icon: <Users className="size-5" />,
+    title: "Acessos",
+    description: "Pessoas, telas abertas, tempo de tela e entradas.",
+  },
   {
     href: "/super77/catworld",
     icon: <Plug className="size-5" />,

@@ -143,6 +143,49 @@ model DashboardScreen {
   isActive           Boolean        @default(true)
   group              DashboardGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   widgets            Widget[]
+  usage              DashboardScreenUsage?
+}
+
+model DashboardScreenUsage {
+  screenId  String          @id
+  views     Int             @default(0)
+  updatedAt DateTime        @updatedAt
+  screen    DashboardScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+}
+
+model UserActivity {
+  email      String   @id
+  lastSeenAt DateTime @default(now())
+  isOnline   Boolean  @default(false)
+
+  @@index([lastSeenAt])
+}
+
+model UserAccessEvent {
+  id         String   @id @default(cuid())
+  email      String
+  kind       String
+  occurredAt DateTime @default(now())
+
+  @@index([occurredAt, kind])
+  @@index([email, occurredAt])
+}
+
+model UserScreenView {
+  id           String   @id @default(cuid())
+  email        String
+  slug         String
+  nome         String?
+  grupo        String?
+  iniciadoEm   DateTime @default(now())
+  ultimoPingEm DateTime @default(now())
+  segundos     Int      @default(0)
+  pings        Int      @default(1)
+  encerrada    Boolean  @default(false)
+
+  @@index([email, iniciadoEm])
+  @@index([slug, iniciadoEm])
+  @@index([iniciadoEm])
 }
 
 model DataSource {
