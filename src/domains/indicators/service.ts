@@ -23,12 +23,18 @@ export async function listVisibleDashboardGroups() {
     orderBy: { order: "asc" },
   });
 
+  // Conceder o GRUPO libera o bloco inteiro; conceder telas soltas libera só elas — é o
+  // que a tela de Usuários promete. Se o grupo não concedido fosse pulado, marcar uma
+  // tela sem marcar o grupo não daria acesso a nada.
   const visible = [];
   for (const group of groups) {
-    if (!canViewResource(group.requiredPermission, "dashboard_group", group.slug)) continue;
-    const screens = group.screens.filter((s) =>
-      canViewResource(s.requiredPermission, "dashboard_screen", s.slug)
-    );
+    const grupoLiberado = canViewResource(group.requiredPermission, "dashboard_group", group.slug);
+    const screens = grupoLiberado
+      ? group.screens
+      : group.screens.filter((s) =>
+        canViewResource(s.requiredPermission, "dashboard_screen", s.slug)
+      );
+    if (screens.length === 0) continue;
     visible.push({ ...group, screens });
   }
 
@@ -62,12 +68,20 @@ export async function requireDashboardAccess(slug: string) {
       (p) => p.permissionKey === permissionKey && p.resourceType === resourceType && p.resourceId === resourceId
     );
 
-  if (!canViewResource(screen.group.requiredPermission, "dashboard_group", screen.group.slug)) return null;
-  if (!canViewResource(screen.requiredPermission, "dashboard_screen", screen.slug)) return null;
-
-  const visibleScreens = screen.group.screens.filter((s) =>
-    canViewResource(s.requiredPermission, "dashboard_screen", s.slug)
+  // Basta a tela: quem recebeu só ela não precisa do grupo junto. O grupo continua
+  // valendo como atalho para o bloco inteiro.
+  const grupoLiberado = canViewResource(
+    screen.group.requiredPermission, "dashboard_group", screen.group.slug
   );
+  if (!grupoLiberado && !canViewResource(screen.requiredPermission, "dashboard_screen", screen.slug)) {
+    return null;
+  }
+
+  const visibleScreens = grupoLiberado
+    ? screen.group.screens
+    : screen.group.screens.filter((s) =>
+      canViewResource(s.requiredPermission, "dashboard_screen", s.slug)
+    );
 
   return { ...screen, group: { ...screen.group, screens: visibleScreens } };
 }

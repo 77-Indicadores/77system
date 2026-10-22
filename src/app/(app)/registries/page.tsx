@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, Database } from "lucide-react";
 import { listRegistries, parseRegistrySchema } from "@/domains/registries/service";
+import { cadastrosVisiveis } from "@/domains/registries/acesso";
 
 export default async function RegistriesPage() {
-  const registries = await listRegistries();
+  // So' os cadastros concedidos a este usuario. Sem isso a tela listava todos os
+  // modulos para qualquer pessoa autenticada, e a alcada nao valia nada aqui.
+  const [todos, visiveis] = await Promise.all([listRegistries(), cadastrosVisiveis()]);
+  const registries = todos.filter((r) => visiveis.includes(r.key));
 
   return (
     <div className="space-y-5">
@@ -18,9 +22,9 @@ export default async function RegistriesPage() {
       {registries.length === 0 ? (
         <div className="rounded-lg border bg-card p-8 text-center">
           <Database className="mx-auto mb-3 size-8 text-muted-foreground/40" />
-          <p className="text-sm font-semibold text-muted-foreground">Nenhum módulo de cadastro ativo.</p>
+          <p className="text-sm font-semibold text-muted-foreground">Nenhum cadastro liberado para você.</p>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            Adicione um <code className="font-mono">RegistryDefinition</code> via seed ou API.
+            A alçada de acesso é concedida por usuário na tela de Usuários.
           </p>
         </div>
       ) : (

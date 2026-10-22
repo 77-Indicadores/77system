@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import { limparPoliticasOrfas } from "../src/domains/rbac/policies";
 
 const prisma = new PrismaClient();
 
@@ -34,14 +35,28 @@ async function main() {
       create: { key, name: key, description: role.description }
     });
 
+    const permissionIds: string[] = [];
     for (const permissionKey of role.permissions) {
       const permission = await prisma.permission.findUniqueOrThrow({ where: { key: permissionKey } });
+      permissionIds.push(permission.id);
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: savedRole.id, permissionId: permission.id } },
         update: {},
         create: { roleId: savedRole.id, permissionId: permission.id }
       });
     }
+
+    /*
+     * O contrato e' a fonte da verdade: permissao retirada do YAML tem de sair do banco.
+     * O seed so' inseria, e por isso um banco ja semeado ficava com o que o contrato ja
+     * nao concede mais. Isso importa para a alcada de acesso: o `operador` nao recebe mais
+     * as permissoes amplas de indicadores e cadastros, e se elas sobrevivessem aqui todo
+     * operador continuaria vendo tudo -- a concessao por usuario nao restringiria nada, e
+     * nenhum erro apareceria.
+     */
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: savedRole.id, permissionId: { notIn: permissionIds } }
+    });
   }
 
   const passwordHash = await bcrypt.hash(process.env.SUPER77_PASSWORD ?? "super77-dev-password", 12);
@@ -191,6 +206,18 @@ async function main() {
       }
     }
   });
+
+  /*
+   * A alcada guarda slug, e slug nao tem chave estrangeira: apagar um grupo, uma tela ou
+   * um cadastro deixa a politica para tras. A leitura ja ignora, entao nada quebra --
+   * elas so' se acumulam, e reapareceriam se o slug fosse reaproveitado.
+   *
+   * Aqui, no fim do seed, e' o unico momento em que o catalogo definitivo ja esta no
+   * banco. Recurso apenas desativado nao e' apagado: desativar uma tela por uma semana
+   * nao pode revogar em silencio a concessao de todo mundo.
+   */
+  const orfas = await limparPoliticasOrfas(prisma);
+  if (orfas > 0) console.log(`Politicas de acesso orfas removidas: ${orfas}`);
 }
 
 main()

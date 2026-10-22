@@ -3,12 +3,20 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
+/**
+ * O convite de acesso dura um dia.
+ *
+ * Quem pede recuperação está na tela esperando o e-mail; quem é cadastrado por outra
+ * pessoa pode só abrir a caixa de entrada no dia seguinte — uma hora derrubaria o convite
+ * antes de ele ser lido.
+ */
+export const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function hashToken(raw: string) {
   return crypto.createHash("sha256").update(raw).digest("hex");
 }
 
-export async function createPasswordResetToken(email: string): Promise<string | null> {
+export async function createPasswordResetToken(email: string, ttlMs = TOKEN_TTL_MS): Promise<string | null> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || user.status !== "ACTIVE") return null;
 
@@ -20,7 +28,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
     data: {
       email,
       tokenHash: hashToken(raw),
-      expires: new Date(Date.now() + TOKEN_TTL_MS),
+      expires: new Date(Date.now() + ttlMs),
     },
   });
 
